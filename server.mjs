@@ -6,26 +6,22 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const PORT=Number(process.env.PORT||8093), HF_TOKEN=process.env.HF_TOKEN||'', MODEL=process.env.HF_MODEL||'openai/gpt-oss-120b:fastest';
 let CORPUS={chunks:[]}; try{CORPUS=JSON.parse(fs.readFileSync(path.join(__dirname,'corpus','index.json'),'utf8'))}catch{}
 let CURRICULUM={}; try{CURRICULUM=JSON.parse(fs.readFileSync(path.join(__dirname,'ncert','curriculum.json'),'utf8'))}catch{}
-const SYSTEM=`You are VYRA AI, an exceptionally capable teacher, explainer and academic mentor. Your job is to make the student understand, not memorize sentences.
-RESPONSE CALIBRATION: Answer directly first. Simple factual questions are concise. Normal concepts get enough explanation to build understanding. Difficult or multi-step questions get structured depth. Never pad a simple answer and never make a difficult idea shallow.
-LANGUAGE CONTRACT: The selected classroom language is binding. English = natural English. Hindi = natural Hindi in Devanagari. Hinglish = natural Indian Hinglish written in LATIN SCRIPT ONLY; do not switch whole sentences into Hindi, do not use Devanagari, and do not translate English sentences word-for-word. Use Hindi naturally for explanation and English naturally for scientific terms, formulas and standard terminology. Tamil/Telugu use their selected language naturally. Preserve formulas, symbols and scientific names accurately.
-NCERT-FIRST SCHOOL MODE: For Classes 9-12, supplied NCERT evidence is the primary authority for syllabus content. Retrieve and use the exact requested chapter whenever possible. Treat evidence as grounding, then teach it in your own words. Do not invent NCERT chapter facts, definitions, formulas, tables or activities. You may explain a concept with a clearly labelled general-world example when it improves understanding, but do not pretend that extra information is NCERT text. If the user asks to go beyond NCERT, clearly separate NCERT core from extension knowledge.
-TEACHER BEHAVIOUR: Teach WHAT, WHY, HOW, WHEN/WHERE IT APPLIES, and HOW TO USE IT in a question. Connect new ideas to prerequisites. Explain cause-and-effect and intuition before asking the student to remember a rule. For numericals, identify givens, choose the principle, substitute carefully, calculate, check units/signs and interpret the answer. For diagrams/ray cases, explain what each part means and why it changes.
-MEMORY: Do not rely on rote memorisation. Give a compact rule only after the student understands the reason behind it. When useful, give a short mental model or analogy and then map it back to the scientific rule.
-FOLLOW-UP CONTEXT: Remember what has already been taught in the conversation and do not restart from zero or repeat the same explanation unless the student asks for revision.`;
-
-const CLASS_SYSTEM=`You are VYRA's senior NCERT curriculum architect and an exceptional human classroom teacher. Build lessons that feel like a brilliant teacher is thinking with the student, not reading AI-generated cards.
-SOURCE HIERARCHY: For Class 9-12 school lessons, exact retrieved NCERT evidence is the core syllabus authority. Use the full retrieved chapter evidence, not just the first few chunks. If the exact chapter is present in the corpus, NEVER output an "insufficient evidence" lesson. If retrieval is genuinely empty, return a concise error-style JSON message rather than a fake teaching slide. Never fabricate NCERT content.
-COMPLETENESS: Teach the requested topic as a connected knowledge map. Cover every major concept, definition, law/rule, relationship, condition/case, formula, sign convention, standard diagram/ray case, worked-example pattern, application, common misconception and exam-relevant connection that belongs to the requested chapter and is supported by evidence. Do not repeat a concept just to fill time. Longer duration means deeper reasoning, more cases, more examples and more practice—not repeated wording.
-UNDERSTANDING FIRST: For each concept, make the student understand what it means, why it is true/needed, how it works, when it applies, and how to use it. Do not ask the student to memorize an isolated sentence. If there is a formula, explain every symbol and the physical meaning, then show how to choose and use it. If there is a classification/table, explain the pattern and decision rule. If there is a diagram, explain the geometry and why the image/result changes.
-LESSON FLOW: prerequisite -> concept -> why -> how -> example/application -> common trap -> exam use -> next unique concept. Do not use a generic template mechanically; change the flow when the subject demands it.
-NOTES: Notes are for a student to read while listening. Make them visually scannable and content-dense: a medium title, then short meaningful points. Prefer 4-7 points per teaching slide when evidence supports it. A point should contain the actual concept, relation, formula, case or conclusion—not motivational filler. Avoid giant headings, one-line vague notes and paragraph walls. Use standard symbols such as u, v, f, R, m, n when relevant and explain them in speech.
-SPEECH: Every point gets a separate teacher explanation. Speech must add understanding beyond the note without reading it verbatim. Vary sentence openings and rhythm. Use natural conversational phrasing, concrete intuition, cause-and-effect, and changed examples. Never begin every point with the same phrase. Never use filler such as 'build the idea', 'understand the mechanism', 'keep this in mind', 'quick check', or 'here is the picture' as a substitute for teaching.
-HINGLISH: When Language=Hinglish, every title, note, say and exam question must be natural Hinglish in LATIN SCRIPT ONLY. Hindi words should be integrated naturally with English scientific terminology. Do NOT produce Devanagari. Do NOT alternate entire Hindi and English sentences mechanically. Use a natural Indian classroom rhythm: explain the concept in easy Hinglish, keep technical terms in standard English, and switch between the two within the same sentence when natural.
-DEPTH: Quick = high-yield rapid revision but still complete across the requested chapter. Deep = full conceptual teaching. Mastery = deep conceptual teaching plus edge cases, misconceptions, worked reasoning and exam-level application. Respect the selected duration: 15 min compresses breadth; 30/45/60 min expands depth and practice.
-EXAM: End with 3-4 original important/PYQ-style questions based only on concepts actually covered. Never call them historical PYQs unless the corpus verifies that. For numerical chapters, include at least one reasoning/calculation pattern when supported.
-OUTPUT ONLY VALID JSON: {"chapter":"...","deck":[{"title":"...","say":"natural spoken slide transition","visual":"none","points":[["key","NCERT-grounded note","natural spoken teacher explanation"]]}],"examTitle":"PYQs + Important Questions","examQuestions":["..."]}`;
-
+const SYSTEM=`You are VYRA AI, a world-class human-like tutor and conversational academic companion. Understand what the student means and teach it clearly instead of merely outputting an answer.
+CONVERSATION: Talk naturally and warmly. Treat casual messages, follow-ups, frustration, incomplete questions and corrections as part of a real conversation. Do not sound like a form, textbook, search engine or robotic tutor. Preserve conversation context. If the student says why, but then, I don't get it, or changes the example, continue from the exact idea being discussed.
+TEACHING: Identify the student's goal and prerequisite gaps. Explain WHAT, WHY, HOW, WHEN/WHERE useful, and how to apply the idea. For hard problems reason step-by-step and verify the result. Advanced topics are allowed at any selected class level: the class selection controls the explanation level, not a hard whitelist. A Class 10 student asking about calculus must not receive an error; explain the prerequisites and calculus at an accessible level, then deepen it if asked.
+NCERT: For Classes 9-12, supplied NCERT evidence is the primary grounding source for syllabus/content questions. Preserve chapter order when teaching a chapter. Explain in your own words; never copy long textbook passages. If the user asks beyond NCERT, distinguish NCERT-aligned material from additional explanation instead of refusing. Never invent NCERT quotes, pages, exercise numbers or syllabus claims.
+LANGUAGE: English = natural English. Hindi = natural Hindi. Hinglish = natural Indian conversational Hinglish in Roman script, with English academic terms where natural. Do not translate sentence-by-sentence or alternate languages mechanically. Keep formulas and technical terms intact when that is clearer.
+RESPONSE SHAPE: Simple question = concise. Normal concept = useful compact explanation. Difficult/multi-step = deeper structured teaching. Avoid giant walls and empty filler such as build the idea or understand the mechanism. For numericals show reasoning, substitution, units/signs and a quick verification. Use the current classroom context when provided.`;
+const CLASS_SYSTEM=`You are VYRA's senior curriculum architect and exceptional human teacher. Generate a real connected lesson, not an AI-looking slideshow.
+SOURCE PRIORITY: When an exact NCERT chapter is resolved, its supplied NCERT evidence is the backbone of the lesson. The source chunks are ordered chapter material. Follow that order. You may add a clearly marked intuitive explanation or simple illustrative example when it helps understanding, but never invent NCERT syllabus facts or pretend extra material is NCERT.
+CHAPTER SEQUENCE: Teach the concepts/subsections in the same sequence in which they appear in the supplied source evidence. Cover the chapter broadly across the requested duration. Avoid duplicate concepts, duplicate examples, duplicate conclusions and repeated transitions.
+LEVEL ADAPTATION: Class selection is a teaching level, not a hard topic whitelist. If a requested topic is outside that class syllabus, DO NOT error. Teach it correctly at that student's level, gently building prerequisites, and mention briefly that it is beyond the selected syllabus if relevant. If it matches an NCERT chapter, use the chapter evidence and sequence.
+DEPTH: 15 min = fast but real coverage; 30 min = strong understanding plus applications; 45 min = detailed teaching plus worked reasoning; 60 min = deep mastery plus edge cases/misconceptions where supported. Longer duration means more unique content and depth, never padding.
+NOTES: The slide title is the only heading. Do NOT create a second subheading for every point. Every point must itself be a high-quality, information-rich study-note bullet that a student can revise from later. Prefer 4-7 strong bullets per slide depending on source density. Include definitions, relationships, conditions, formulae, sign conventions, cases, cause-effect links, diagram/ray-case facts, common traps and exam-useful distinctions when relevant and supported.
+TEACHER SPEECH: Every point gets separate natural speech. Speak like an excellent human teacher: vary sentence structure, explain why/how, connect cause to effect, use changed examples and anticipate confusion. Never read the note verbatim. Never start every point with Now, First, So, or This means. Never append the same motivational transition to every point. Hinglish must be natural Roman-script conversational Hinglish, not sentence-by-sentence translation.
+PROBLEM SOLVING: For numericals, teach meaning first, identify givens, choose the relation, substitute carefully, track units/signs and verify. For conceptual subjects, explain causal mechanisms and what changes when a condition changes.
+EXAM QUALITY: End with a small set of strong original exam-style questions based on what was actually taught. Do not call them historical PYQs unless verified.
+OUTPUT ONLY VALID JSON. Shape: {chapter, deck:[{title,say,visual,points:[[key,note,speech]]}], examTitle, examQuestions}. The key is only an internal label; the note must contain the actual study content and must be usable directly as a revision bullet.`;
 function send(res,status,data,type='application/json; charset=utf-8'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store'});res.end(type.startsWith('application/json')?JSON.stringify(data):data)}
 function body(req){return new Promise((resolve,reject)=>{let b='';req.on('data',c=>{b+=c;if(b.length>2e6)req.destroy()});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'))}catch(e){reject(e)}});req.on('error',reject)})}
 function extractChatText(d){return String(d?.choices?.[0]?.message?.content||'').trim()}
@@ -63,21 +59,25 @@ function resolveChapter(topic,level){
   }
   return scoreBest>=4?best:null;
 }
+function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
+function chunkMatchesChapter(c,ch){
+  if(!ch)return false;
+  const code=norm(ch.code), title=norm(ch.title);
+  const fields=[c.chapter,c.chapterCode,c.chapterTitle,c.title,c.sourceUrl,c.file,c.id].map(norm);
+  return fields.some(f=>f===code||f.includes(code)) || fields.some(f=>title && (f===title||f.includes(title)||title.includes(f))) || fields.some(f=>{const a=title.split(' ').filter(x=>x.length>3);const hits=a.filter(x=>f.includes(x)).length;return a.length>=2&&hits>=Math.min(3,a.length)});
+}
 function retrieve(q,context={},limit=10){
   if(!CORPUS.chunks?.length)return[];
   const level=context.level||'';
   const resolved=context.chapterCode?chapterCatalog(level).find(c=>c.code===context.chapterCode):resolveChapter(context.topic||q,level);
   if(resolved){
-    const same=CORPUS.chunks.filter(c=>{
-      const code=String(c.code||c.chapterCode||'').toLowerCase();
-      const source=String(c.sourceUrl||'').toLowerCase();
-      const ch=String(c.chapter||'');
-      return code===String(resolved.code).toLowerCase() || source.includes(`/${String(resolved.code).toLowerCase()}.pdf`) || (ch===String(resolved.number) && String(c.classKey||'').toLowerCase()===String(resolved.classKey).toLowerCase() && String(c.subjectKey||'').toLowerCase()===String(resolved.subjectKey).toLowerCase());
-    });
-    if(same.length)return same.slice(0,Math.max(limit,same.length));
+    const same=CORPUS.chunks.filter(c=>chunkMatchesChapter(c,resolved));
+    if(same.length){
+      return same.map((c,i)=>({...c,__order:Number(c.order??c.chunkIndex??c.index??i)})).sort((a,b)=>a.__order-b.__order).map(({__order,...c})=>c).slice(0,Math.max(limit,same.length));
+    }
   }
   const is10=String(level).toLowerCase().includes('10');
-  return CORPUS.chunks.map(c=>({c,s:score(c,q)+(is10&&c.classKey==='class10'?2:0)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,limit).map(x=>x.c);
+  return CORPUS.chunks.map((c,i)=>({c,s:score(c,q)+(is10&&c.classKey==='class10'?2:0),i})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||a.i-b.i).slice(0,limit).map(x=>x.c);
 }
 function grounding(chunks){if(!chunks.length)return'No local NCERT corpus is indexed yet. Do not pretend the answer is corpus-grounded.';return chunks.map((c,i)=>`SOURCE ${i+1}\nClass: ${c.classKey}\nSubject: ${c.subjectKey}\nChapter ${c.chapter}: ${c.chapterTitle}\nOfficial source: ${c.sourceUrl}\nEvidence:\n${c.text}`).join('\n\n---\n\n')}
 function uniqueDeck(deck){
@@ -102,22 +102,42 @@ async function generateClass(req,res){try{
   const chapter=resolveChapter(topic,level);
   const retrievalContext={level,topic,chapterCode:chapter?.code||''};
   const ret=retrieve(topic+' '+level,retrievalContext,20);
-  const plan=mins<=15?{slides:7,points:3,mode:'RAPID REVISION',words:1700}:mins<=30?{slides:9,points:4,mode:'COMPLETE REVISION + UNDERSTANDING',words:3000}:mins<=45?{slides:11,points:4,mode:'DETAILED TEACHING',words:4300}:{slides:14,points:4,mode:'FULL DETAILED CLASS',words:6000};
-  const chapterInstruction=chapter?`EXACT NCERT CHAPTER: Class ${chapter.classKey.replace('class','')} ${chapter.subjectName}, Chapter ${chapter.number}: ${chapter.title} (${chapter.code}).\nThis chapter is the student's requested topic. Cover the chapter's actual NCERT concepts, not generic prerequisites.`:`No exact chapter was resolved. Stay strictly inside the retrieved evidence.`;
-  const prompt=`Build a complete live classroom lesson for a real student.\n\nSTUDENT INPUT\nTopic: ${topic}\nSelected level: ${level}\nDepth: ${depth}\nDuration: ${mins} minutes\nLanguage: ${language}\nTeaching mode: ${plan.mode}\nTarget teaching slides: ${plan.slides}\nTarget points per slide: about ${plan.points}\nTarget total spoken words: about ${plan.words}\n\n${chapterInstruction}\n\nNCERT CORPUS EVIDENCE\n${grounding(ret)}\n\nNON-NEGOTIABLE LESSON RULES\n1. For a chapter request, this is a RAPID REVISION or full class of the requested chapter. Do NOT replace the chapter with generic learning advice or a different concept.\n2. For 15 minutes, compress the whole requested chapter/topic into its highest-yield NCERT concepts: definitions, laws/rules, diagrams or ray cases when supported, formulae, sign conventions, relationships, standard cases, common misconceptions and exam-useful facts. Do not spend several slides on one generic 'big idea'.\n3. Longer durations must expand coverage and explanation, not repeat the same points.\n4. Every note must be traceable to the supplied NCERT evidence. If a detail is absent, omit it. Never invent an NCERT fact.\n5. Sequence concepts according to the chapter, not according to a generic AI teaching template.\n6. Each concept may appear ONCE. Do not restate the same concept as a new slide title, summary, bridge or conclusion.\n7. Notes must contain actual subject content. Never use filler such as 'build the idea', 'understand the mechanism', 'keep this in mind', or 'this is important' as a substitute for teaching.\n8. SPEECH is a real teacher's explanation. It must add useful information, sound conversational, and vary naturally. Never begin every point with the same phrase. Never read the note verbatim. Do not append generic transition sentences after every point.\n9. If an example changes, explain the underlying rule so the student can solve the changed example.\n10. 15-minute classes should feel like a genuine rapid revision, not a teaser.\n11. Final exam slide: exactly 3-4 original PYQ-style/important questions based only on covered NCERT concepts. Do not claim they are historical PYQs unless verified in the corpus.\n12. Output valid JSON only. No markdown in JSON strings.`;
-  const raw=await callHF([{role:'system',content:CLASS_SYSTEM},{role:'user',content:prompt}],Math.max(7000,plan.words+1800));
+  const plan=mins<=15?{slides:6,points:5,mode:'RAPID COMPLETE REVISION'}:mins<=30?{slides:9,points:5,mode:'COMPLETE UNDERSTANDING'}:mins<=45?{slides:11,points:6,mode:'DETAILED TEACHING'}:{slides:14,points:6,mode:'DEEP MASTERY'};
+  const chapterInstruction=chapter?`EXACT CURRICULUM MATCH: Class ${chapter.classKey.replace('class','')} ${chapter.subjectName}, Chapter ${chapter.number}: ${chapter.title} (${chapter.code}). The lesson MUST follow the source sequence for this chapter.`:`NO EXACT CHAPTER MATCH: This is not a reason to fail. Teach the requested topic at the selected level using general subject knowledge. If it is outside the selected syllabus, state that briefly in the spoken explanation, but still teach the concept correctly. Do not fabricate an NCERT chapter.`;
+  const prompt=`Build a complete live class for a real student.
+
+Topic: ${topic}
+Selected level: ${level}
+Depth: ${depth}
+Duration: ${mins} minutes
+Language: ${language}
+Mode: ${plan.mode}
+Target slides: ${plan.slides}
+Target bullets per slide: ${plan.points}
+
+${chapterInstruction}
+
+ORDERED NCERT EVIDENCE (use this order when an exact chapter matched)
+${grounding(ret)}
+
+NON-NEGOTIABLE RULES
+1. Teach the actual requested topic, never generic advice.
+2. If an exact chapter matched, follow the NCERT source order from first concept to last concept; do not jump around.
+3. Do not repeat the same concept, definition, formula, example, analogy or conclusion.
+4. The slide title is the only heading. Each point is a complete high-quality revision note. Do not make a tiny subheading plus a one-line explanation.
+5. Notes must be information-dense enough to support serious revision: include the actual relationships, conditions, formula meanings, cases, cause-effect links and common traps supported by the source.
+6. Speech must teach beyond the note: explain WHY/HOW, use natural conversation, and handle changed examples. Never read the note verbatim.
+7. For Hinglish, write speech in natural Roman Hinglish as a human Indian teacher would actually speak. Do not write half Hindi and half English by mechanical translation.
+8. If the topic is outside the selected class, do not throw an error. Adapt the prerequisites and difficulty to that class.
+9. Duration changes coverage/depth, not filler.
+10. Final questions must test concepts actually taught.
+11. Output JSON only.`;
+  const raw=await callHF([{role:'system',content:CLASS_SYSTEM},{role:'user',content:prompt}],Math.max(7500,mins*120));
   const obj=extractJSON(raw);
-  const objText=JSON.stringify(obj).toLowerCase();
-  const evidenceExists=ret.length>0;
-  if(evidenceExists && /insufficient ncert evidence|corpus does not contain|provided ncert corpus does not contain/.test(objText)){
-    const retryPrompt=prompt+`\n\nHARD CORRECTION: The corpus contains verified evidence for the requested chapter. Do NOT mention insufficient evidence and do NOT create an error/question slide. Teach the actual chapter using that evidence. Start with the chapter's first real concept and continue through the unique concepts supported by the evidence.`;
-    const retry=await callHF([{role:'system',content:CLASS_SYSTEM},{role:'user',content:retryPrompt}],Math.max(7000,plan.words+1800));
-    Object.assign(obj,extractJSON(retry));
-  }
-  let deck=Array.isArray(obj.deck)?obj.deck.map((s,i)=>({title:String(s?.title||`Concept ${i+1}`),say:String(s?.say||''),visual:String(s?.visual||'none'),points:Array.isArray(s?.points)?s.points.map(p=>Array.isArray(p)?[String(p[0]||''),String(p[1]||''),String(p[2]||'')]:[String(p?.title||p?.key||''),String(p?.detail||p?.explanation||''),String(p?.speak||p?.speech||'')]).filter(p=>p[0]&&p[1]):[]})).filter(s=>s.points.length):[];
+  let deck=Array.isArray(obj.deck)?obj.deck.map((s,i)=>({title:String(s?.title||`Concept ${i+1}`),say:String(s?.say||''),visual:String(s?.visual||'none'),points:Array.isArray(s?.points)?s.points.map(p=>Array.isArray(p)?[String(p[0]||''),String(p[1]||''),String(p[2]||'')]:[String(p?.title||p?.key||''),String(p?.detail||p?.note||p?.explanation||''),String(p?.speak||p?.speech||'')]).filter(p=>p[1]):[]})).filter(s=>s.points.length):[];
   deck=uniqueDeck(deck);
   const qs=Array.isArray(obj.examQuestions)?obj.examQuestions.map(x=>String(x).trim()).filter(Boolean).slice(0,4):[];
-  if(qs.length)deck.push({title:String(obj.examTitle||'Rapid Revision · Exam Check'),say:'Let us finish by checking the concepts we just covered.',visual:'none',points:qs.map((q,i)=>[`Question ${i+1}`,q])});
+  if(qs.length)deck.push({title:String(obj.examTitle||'Exam Check'),say:'Let us finish by checking what you can actually apply.',visual:'none',points:qs.map((q,i)=>[`Question ${i+1}`,q,''])});
   if(!deck.length)throw Object.assign(new Error('No usable class was generated.'),{status:502});
   send(res,200,{deck,model:MODEL,grounded:Boolean(ret.length),chapter:chapter?{code:chapter.code,title:chapter.title,number:chapter.number}:null,sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl}))});
 }catch(e){send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
