@@ -1,0 +1,27 @@
+{
+  "version": "2026-27",
+  "source": "https://ncert.nic.in/textbook.php",
+  "books": {
+    "class10": {
+      "science": {
+        "name": "Science",
+        "officialIndex": "https://ncert.nic.in/textbook.php?jesc1=0-16",
+        "chapters": [
+          {"number":1,"title":"Chemical Reactions and Equations","code":"jesc101"},
+          {"number":2,"title":"Acids, Bases and Salts","code":"jesc102"},
+          {"number":3,"title":"Metals and Non-metals","code":"jesc103"},
+          {"number":4,"title":"Carbon and its Compounds","code":"jesc104"},
+          {"number":5,"title":"Life Processes","code":"jesc105"},
+          {"number":6,"title":"Control and Coordination","code":"jesc106"},
+          {"number":7,"title":"How do Organisms Reproduce?","code":"jesc107"},
+          {"number":8,"title":"Heredity","code":"jesc108"},
+          {"number":9,"title":"Light - Reflection and Refraction","code":"jesc109"},
+          {"number":10,"title":"The Human Eye and the Colourful World","code":"jesc110"},
+          {"number":11,"title":"Electricity","code":"jesc111"},
+          {"number":12,"title":"Magnetic Effects of Electric Current","code":"jesc112"},
+          {"number":13,"title":"Our Environment","code":"jesc113"}
+        ]
+      }
+    }
+  }
+}

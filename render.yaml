@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: vyra-ai-classroom
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: HF_TOKEN
+        sync: false
+      - key: HF_MODEL
+        value: openai/gpt-oss-120b:fastest

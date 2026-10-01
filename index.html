@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VYRA">
+<title>VYRA — AI Classroom</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Kalam:wght@400;700&display=swap');
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#050505;color:#f6f3ea;font-family:'DM Sans',sans-serif}body{overflow:hidden}button,input{font:inherit}.app{height:100dvh;background:#050505}
+.home,.setup{height:100dvh;overflow:auto;background:radial-gradient(circle at 50% -20%,#1b2550,#08090d 42%,#050505 75%)}header{height:68px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff12}.brand{display:flex;align-items:center;gap:10px;letter-spacing:2px}.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#9d91ff,#58d2ff);color:#050505;font-weight:900}.avatar{width:34px;height:34px;border:1px solid #ffffff20;border-radius:50%;display:grid;place-items:center;color:#cbd0dc}.hero{text-align:center;max-width:1000px;margin:auto;padding:10vh 22px}.eyebrow{font-size:11px;letter-spacing:2.6px;color:#8992a7;font-weight:700}.hero h1,.setup h1{font-family:'Space Grotesk';font-size:clamp(44px,7vw,82px);line-height:.98;margin:18px 0}.hero h1 span{color:#9b91ff}.hero p,.setup p{color:#929aac;font-size:17px}.composer{max-width:720px;margin:38px auto 18px;padding:7px 8px 7px 20px;border:1px solid #ffffff1a;background:#11141b;border-radius:18px;display:flex;box-shadow:0 20px 70px #0008}.composer input{background:none;border:0;outline:0;color:white;flex:1;font-size:16px}.composer button,.startBtn{touch-action:manipulation;min-width:58px;min-height:52px;border:0;background:linear-gradient(135deg,#9b8fff,#4aa9ff);color:white;border-radius:13px;padding:13px 16px;cursor:pointer}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.chips button,.options button{background:#ffffff08;border:1px solid #ffffff12;color:#aeb6c8;border-radius:99px;padding:9px 14px;cursor:pointer}.featureGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1100px;margin:0 auto 50px;padding:0 24px}.feature{background:#ffffff05;border:1px solid #ffffff0c;padding:24px;border-radius:18px}.feature p{color:#80899d;line-height:1.5;font-size:14px}.iconBtn{background:none;border:0;color:#aeb6c8;cursor:pointer}.setup{padding-bottom:60px}.setupInner{max-width:760px;margin:auto;padding:65px 24px}.setupHead{text-align:center;margin-bottom:45px}.setup h1{font-size:56px}.choice{padding:24px 0;border-bottom:1px solid #ffffff10}.choiceLabel{color:#bfc6d5;font-weight:600;margin-bottom:15px}.options{display:flex;gap:8px;flex-wrap:wrap}.options button{border-radius:10px}.options button.selected{background:#8b7cff1b;color:#e4e1ff;border-color:#8b7cff}.startBtn{width:100%;margin-top:36px;padding:17px;font-weight:700}
+/* TRUE FULL-SCREEN CLASSROOM */
+.classroom{position:fixed;inset:0;background:#020202;z-index:20;overflow:hidden;color:#f7f3e9}.classroom:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 45%,#ffffff06,transparent 50%),linear-gradient(180deg,#0007,transparent 25%,#0008)}
+.classTop{position:absolute;top:0;left:0;right:0;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:20;background:linear-gradient(#020202e8,transparent);transition:.3s}.classroom.chromeHidden .classTop{opacity:0}.classMeta{display:flex;align-items:center;gap:14px;color:#9ba3b4;font-size:12px}.progress{width:220px;height:3px;background:#ffffff12;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;background:#f2eee2;transition:width .5s}.exit{font-size:22px}
+.lessonSurface{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:60px 7vw 50px;z-index:3}.lessonBoard{position:relative;width:min(1280px,92vw);height:min(78vh,760px);min-height:440px;overflow:hidden;border-radius:28px;background:linear-gradient(135deg,#070707,#0b0b0b 55%,#050505);border:1px solid #ffffff08;box-shadow:0 45px 130px #000e,inset 0 0 100px #ffffff02}.lessonBoard:before{content:"";position:absolute;inset:0;background-image:radial-gradient(#ffffff0a 1px,transparent 1px);background-size:28px 28px;opacity:.08;pointer-events:none}.boardHeader{position:absolute;top:25px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;z-index:5}.boardTag{font-size:10px;letter-spacing:3px;color:#858b96}.teacherState{font-size:11px;color:#9aa2b0}.chalkArea{position:absolute;inset:0;padding:92px 58px 68px;z-index:4;display:block;overflow:hidden}.slideTitle{font-family:'Kalam',cursive;font-size:clamp(28px,3vw,40px);line-height:1.05;color:#f4f0e6;letter-spacing:.2px;margin:0 0 12px;text-align:left;max-width:1000px}.noteStack{width:100%;max-width:1120px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}.concept{position:relative;width:100%;padding:4px 0 5px;border:0;border-radius:0;opacity:0;transform:translateY(10px);transition:.35s;background:transparent}.concept.visible{opacity:1;transform:none}.concept.complete,.concept.active{background:transparent;border:0;box-shadow:none}.concept .row{display:flex;gap:10px;align-items:flex-start}.concept .key{display:none}.concept .detail{font-family:'DM Sans',sans-serif;font-size:clamp(15px,1.45vw,18px);line-height:1.42;color:#c9c5bb;margin:2px 0 0 0;max-width:1040px}.concept.complete .detail{color:#d5d1c8}.concept.active .detail{color:#c9c5bb}.bullet{width:auto;height:auto;flex:0 0 22px;border:0;border-radius:0;display:block;font-family:'Kalam',cursive;color:#f1ebdc;font-size:clamp(17px,1.6vw,20px);margin-top:1px}.point{font-family:'Kalam',cursive;font-size:clamp(20px,2vw,27px);line-height:1.18;color:#f4f0e6;letter-spacing:.15px}.concept.complete .point{color:#fff}.concept.complete:after{display:none}
+/* Visual is a faint BACKGROUND layer, never a separate card */
+.visualBack{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .7s;pointer-events:none}.visualBack.show{opacity:.16}.visualBack svg{width:100%;height:100%;display:block}.visualBack .label{font-family:'Space Grotesk';font-size:24px;letter-spacing:2px;fill:#e8e0ce}.visualBack .thin{fill:none;stroke:#e8e0ce;stroke-width:1.2}.visualBack .faint{fill:none;stroke:#e8e0ce;stroke-width:2}.visualBack .dot{fill:#f0e9d8}
+.speakingBar{position:absolute;bottom:0;left:0;right:0;height:72px;display:flex;align-items:center;justify-content:center;z-index:12;background:linear-gradient(transparent,#020202f5)}.speaking{display:flex;align-items:center;gap:10px;color:#9da5b5;font-size:12px}.wave{display:flex;align-items:center;gap:3px;height:16px}.wave i{width:3px;background:#eee7d8;border-radius:3px;animation:w .65s infinite alternate}.wave i:nth-child(2){animation-delay:.1s}.wave i:nth-child(3){animation-delay:.2s}.wave i:nth-child(4){animation-delay:.3s}@keyframes w{to{height:14px;opacity:.25}}
+.doubtBtn{position:absolute;right:28px;bottom:24px;z-index:30;border:1px solid #ffffff18;background:#11131aee;color:#fff;padding:14px 19px;border-radius:99px;box-shadow:0 18px 55px #000a;cursor:pointer;font-weight:700}.doubtBtn:hover{background:#191c25}.doubtPanel{position:absolute;right:24px;top:80px;bottom:82px;width:min(390px,90vw);z-index:40;background:#0b0d12f5;border:1px solid #ffffff16;border-radius:20px;box-shadow:0 30px 100px #000d;transform:translateX(calc(100% + 40px));transition:.35s;display:flex;flex-direction:column;backdrop-filter:blur(18px)}.doubtPanel.open{transform:none}.doubtHead{padding:19px;border-bottom:1px solid #ffffff0e;display:flex;justify-content:space-between;align-items:center}.live{font-size:9px;color:#77e1bc;letter-spacing:1px}.chat{flex:1;overflow:auto;padding:18px}.msg{display:flex;margin-bottom:13px}.msg p{max-width:85%;margin:0;padding:10px 12px;border-radius:12px;background:#ffffff08;color:#c7ccd7;line-height:1.5;font-size:13px}.msg.student{justify-content:flex-end}.msg.student p{background:#7f73ff22;color:#e1ddff}.empty{text-align:center;color:#727b8d;margin-top:18vh;line-height:1.5}.empty b{display:block;color:#dce0e8;margin-top:10px}.ask{padding:12px;border-top:1px solid #ffffff0e;display:flex;gap:7px}.ask input{flex:1;min-width:0;background:#ffffff08;border:1px solid #ffffff0e;color:#fff;border-radius:11px;padding:11px;outline:0}.ask button{width:42px;border:0;border-radius:11px;background:#ffffff09;color:#d7dbe5;cursor:pointer}.ask button:last-child{background:#8b7cff;color:#fff}.listening{background:#c55d77!important;color:#fff!important}.toast{position:absolute;left:50%;bottom:27px;transform:translateX(-50%);z-index:60;background:#f4f0e7;color:#080808;padding:10px 15px;border-radius:99px;font-size:13px}.rotateHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;background:#111c;border:1px solid #ffffff22;border-radius:16px;padding:18px 20px;color:#ddd;display:none;text-align:center}.rotateHint.show{display:block}.voiceBadge{position:absolute;left:24px;bottom:24px;z-index:30;background:#11131add;border:1px solid #ffffff14;border-radius:99px;padding:9px 12px;color:#aaa;font-size:11px}.voiceBadge b{color:#eee}.voiceMenu{position:absolute;left:24px;bottom:64px;z-index:35;width:250px;background:#0b0d12f7;border:1px solid #ffffff16;border-radius:15px;padding:12px;display:none;backdrop-filter:blur(18px)}.voiceMenu.open{display:block}.voiceMenu label{display:block;font-size:10px;color:#8e96a7;letter-spacing:1px;margin-bottom:7px}.voiceMenu select{width:100%;background:#171a22;color:#eee;border:1px solid #ffffff12;border-radius:9px;padding:9px}.voiceMenu input{width:100%;accent-color:#9b8fff}.speedRow{display:flex;justify-content:space-between;color:#9ca4b4;font-size:11px;margin-top:10px}
+@media(max-width:800px){.featureGrid{grid-template-columns:1fr}.lessonBoard{width:100vw;height:100vh;min-height:0;border-radius:0;border:0}.lessonSurface{padding:0}.chalkArea{padding:88px 22px 82px}.noteStack{width:100%;max-width:none;gap:7px}.slideTitle{font-size:clamp(25px,7vw,34px);margin-bottom:10px}.concept{padding:3px 0}.concept .row{gap:8px}.bullet{flex-basis:18px;font-size:17px}.point{font-size:clamp(19px,5.4vw,25px)}.concept .detail{font-size:clamp(14px,3.8vw,17px);line-height:1.38}.classTop{padding:0 15px}.progress{width:100px}.doubtBtn{right:15px;bottom:16px}.doubtPanel{right:12px;top:70px;bottom:70px}.boardHeader{left:18px;right:18px}.teacherState{display:none}}
+
+.languageCards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px}
+.langCard{border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px;background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:8px;align-items:center}
+.langCard.selected{border-color:rgba(255,255,255,.7);box-shadow:0 0 0 1px rgba(255,255,255,.15) inset}
+.langPlay,.langName{border:0;color:inherit;background:transparent;cursor:pointer}
+.langPlay{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1)}
+.langName{font-weight:700}
+.speedControl{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(10,10,10,.72);backdrop-filter:blur(8px);color:#fff}
+.speedControl button{width:28px;height:28px;border:0;border-radius:8px;background:#222;color:#fff;font-size:18px}
+.speedControl b{min-width:34px;text-align:center}
+@media(max-width:700px){.languageCards{grid-template-columns:repeat(3,1fr)}.point{font-size:clamp(18px,5.2vw,24px)}.detail{font-size:14px;line-height:1.55}}
+button,input,select{touch-action:manipulation}
+button{cursor:pointer}
+.chips button,.options button,.langName,.langPlay{user-select:none;-webkit-user-select:none}
+</style>
+<style id="vyra-chat-css">
+#vyraChatTab{position:fixed;right:18px;bottom:18px;z-index:9999;padding:12px 18px;border:1px solid #333;border-radius:14px;background:#111;color:#fff;font-weight:700}
+#vyraChatPanel{position:fixed;inset:0;z-index:10000;background:#080a0f;color:#fff;display:none;flex-direction:column}
+.vch{height:64px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #222}
+.vch .brand{font-weight:800}.vch .status{color:#7bd49a;font-size:11px;margin-left:8px}
+.vch button{background:#151923;color:#fff;border:1px solid #303541;border-radius:10px;padding:8px 12px;margin-left:6px}
+#vyraMsgs{flex:1;overflow:auto;max-width:900px;width:100%;margin:auto;padding:24px;box-sizing:border-box}
+.vmsg{margin:14px 0;line-height:1.7;font-size:15px}.vmsg.user{margin-left:auto;max-width:75%;background:#202632;padding:11px 15px;border-radius:17px 17px 5px 17px}.vmsg.ai{max-width:850px}.vmsg.ai b{color:#b9c3ff}
+.vcomposer{border-top:1px solid #222;padding:12px;display:flex;justify-content:center}.vform{max-width:900px;width:100%;display:flex;gap:8px;background:#121620;border:1px solid #303541;border-radius:15px;padding:7px}.vform textarea{flex:1;background:transparent;color:#fff;border:0;outline:0;resize:none;padding:10px;font:inherit}.vform button{border:0;border-radius:11px;padding:0 16px;font-weight:800}
+</style>
+<script>
+window.VYRA_PWA = {installed:false};
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.VYRA_PWA.deferred=e; });
+window.addEventListener('appinstalled', () => { window.VYRA_PWA.installed=true; });
+</script>
+</head>
+<body><div id="app"></div>
+<script>
+const lessons={
+'Chemical Bonding':[
+ {title:'Why atoms bond',say:'Atoms do not bond randomly. They bond because the combined arrangement can be more stable and lower in energy. Think of stability as the main reason, and we will build everything else from that idea.',points:[['Atoms form bonds to become more stable.','Stability is the big idea behind bonding.'],['Valence electrons control most bonding behavior.','The outermost electrons are the ones that usually participate.'],['Lower energy generally means greater stability.','A system tends to move toward arrangements that are energetically favorable.']],visual:'none'},
+ {title:'The octet idea',say:'Now look only at the outer shell. For many main-group atoms, a filled valence shell is associated with increased stability. The octet rule is a useful model, but it has important exceptions.',points:[['Many atoms tend toward a stable valence shell.','We use this model to predict common bonding patterns.'],['Eight valence electrons is a useful main-group model.','This is the familiar octet idea.'],['The octet rule is a guide, not an absolute law.','Later, we will meet cases where this simple rule needs modification.']],visual:'octet'},
+ {title:'Ionic bonding',say:'Here the key event is electron transfer. One atom can lose electrons while another gains them. The resulting ions have opposite charges, so they attract and form an ionic structure.',points:[['Electron transfer can create ions.','Loss creates a positive ion; gain creates a negative ion.'],['Opposite charges attract.','This electrostatic attraction is central to ionic bonding.'],['Ionic solids form repeating lattices.','The particles arrange into a strong, ordered structure.']],visual:'ionic'},
+ {title:'Covalent bonding',say:'Now imagine a different strategy: instead of transferring electrons, atoms share electron pairs. Those shared electrons are attracted to both nuclei, creating a covalent bond.',points:[['Covalent bonds involve shared electron pairs.','Sharing lets both atoms participate in the bonding pair.'],['Shared electrons are attracted to both nuclei.','That attraction helps hold the atoms together.'],['Lewis structures represent shared electrons.','They give us a simple visual language for covalent bonding.']],visual:'covalent'}],
+'Photosynthesis':[
+ {title:'The big idea',say:'Photosynthesis is the process by which photosynthetic organisms capture light energy and store it as chemical energy. We will separate the process into inputs, energy capture, and carbon fixation.',points:[['Light energy is captured.','Light provides the energy that starts the process.'],['Carbon dioxide and water provide raw materials.','These inputs are transformed through several reactions.'],['Chemical energy is stored in organic molecules.','The captured energy ultimately supports the formation of carbohydrate.']],visual:'photo'},
+ {title:'Light-dependent reactions',say:'Light energizes electrons and drives reactions that produce ATP and NADPH. These molecules then carry usable chemical energy into the next stage.',points:[['Light energizes electrons.','Photons provide the energy for electron excitation.'],['ATP and NADPH are produced.','They act as chemical energy and reducing-power carriers.'],['The products feed the next stage.','The energy carriers are then used for carbon fixation.']],visual:'light'},
+ {title:'The Calvin cycle',say:'The Calvin cycle uses ATP and NADPH to help incorporate carbon dioxide into organic molecules. The important idea is that carbon is being built into a usable form.',points:[['Carbon dioxide enters the cycle.','This is the carbon source for building organic molecules.'],['ATP supplies energy.','Energy is spent to drive the reactions.'],['NADPH supplies reducing power.','Together, these resources help form carbohydrate precursors.']],visual:'calvin'}]
+};
+const generic=[
+ {title:'Build the idea',say:'Let us start from the simplest possible picture. I will give you the core idea first, then add the details only when they help you understand it.',points:[['Start with the core definition.','First understand what the concept actually means.'],['Connect it to a simple example.','A familiar example makes the abstract idea easier to hold.'],['Then add the deeper mechanism.','Once the foundation is clear, the advanced detail becomes much easier.']],visual:'none'},
+ {title:'Make it intuitive',say:'Now I am going to connect the concept to a mental model. Do not memorize the words yet; understand the relationship between the parts.',points:[['Identify the important parts.','Separate the essential pieces from the extra information.'],['Understand how the parts interact.','The relationship is often more important than a definition.'],['Use one test example.','If you can apply the idea, you actually understand it.']],visual:'none'}
+];
+let state={screen:'home',topic:'',level:'Class 11',depth:'Deep',mins:30,language:'English',voiceName:'auto',languageVoice:'auto',slide:0,point:0,chat:[],listening:false,paused:false,voiceRate:.92,voicePitch:.90,speechToken:0,currentSpeechText:'',currentSpeechAfter:null,aiDeck:null,classLoading:false};window.VYRA_CLASS_STATE=state;const app=document.getElementById('app');
+function syncAIChatButton(){
+  const tab=document.getElementById('vyraChatTab');
+  if(!tab)return;
+  // AI Chat is available only before a live class starts.
+  tab.style.display=state.screen==='class'?'none':'block';
+}
+function render(){
+  try{
+    if(state.screen==='home')home();
+    else if(state.screen==='setup'){ setup(); bindSetupChoices(); }
+    else classroom();
+    syncAIChatButton();
+  }catch(err){
+    console.error(err);
+    state.screen='home';
+    home();
+    toast('VYRA had a small screen error — try again.');
+  }
+  if(state.screen==='home'){
+    const go=document.getElementById('topicGo');
+    const input=document.getElementById('topic');
+    if(go) go.onclick=()=>openSetup();
+    if(input) input.onkeydown=e=>{if(e.key==='Enter')openSetup()};
+  }
+}
+function home(){app.innerHTML=`<div class="home"><header><div class="brand"><div class="logo">✦</div><b>VYRA</b></div><div class="avatar">R</div></header><main class="hero"><div class="eyebrow">AI-POWERED CLASSROOM</div><h1>What do you want<br><span>to master today?</span></h1><p>VYRA turns your topic into a live, adaptive classroom.</p><div class="composer"><input id="topic" autocomplete="off" placeholder="e.g. Chemical Bonding, calculus, genetics..." value="${escapeHtml(state.topic)}"><button id="topicGo" type="button" aria-label="Start topic">➜</button></div><div class="chips"><button type="button" data-topic="Chemical Bonding">⚗ Chemical Bonding</button><button type="button" data-topic="Photosynthesis">🌿 Photosynthesis</button><button type="button" data-topic="Quadratic Equations">∑ Quadratic Equations</button></div></main><section class="featureGrid"><div class="feature"><b>Adaptive teaching</b><p>Depth follows your level and pace.</p></div><div class="feature"><b>Talk naturally</b><p>Interrupt the class and ask by voice.</p></div><div class="feature"><b>Live chalk notes</b><p>Key points appear on the board as the tutor teaches.</p></div><div class="feature"><b>Teacher-like flow</b><p>Concept → intuition → example → exam connection → quick check.</p></div></section></div>`;
+  document.querySelectorAll('[data-topic]').forEach(b=>b.onclick=()=>pick(b.dataset.topic));
+}
+function escapeHtml(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function pick(x){
+  state.topic=x;
+  const input=document.getElementById('topic');
+  if(input){input.value=x;input.focus();return}
+  render();
+}
+function openSetup(){
+  const input=document.getElementById('topic');
+  const topic=(input?.value||state.topic||'').trim();
+  state.topic=topic||'Chemical Bonding';
+  state.screen='setup';
+  render();
+}
+const classLanguages=[
+  {id:'English',label:'English',lang:'en-IN',sample:'Hello, today we will learn this topic step by step.'},
+  {id:'Hindi',label:'हिन्दी',lang:'hi-IN',sample:'नमस्ते, आज हम इस विषय को आसान तरीके से सीखेंगे।'},
+  {id:'Hinglish',label:'Hinglish',lang:'en-IN',sample:'Aaj hum is topic ko step by step, bilkul easy way mein samjhenge.'},
+  {id:'Tamil',label:'தமிழ்',lang:'ta-IN',sample:'வணக்கம், இன்று இந்த தலைப்பை எளிமையாக படிப்போம்.'},
+  {id:'Telugu',label:'తెలుగు',lang:'te-IN',sample:'హలో, ఈ రోజు ఈ విషయాన్ని చాలా సులభంగా నేర్చుకుందాం.'}
+];
+function choice(label,options,key,asNumber=false){
+  const value=state[key];
+  return `<div class="choice"><div class="choiceLabel">${label}</div><div class="options">${options.map(v=>`<button type="button" data-choice-key="${key}" data-choice-value="${String(v)}" class="${String(value)===String(v)?'selected':''}">${v}${asNumber?' min':''}</button>`).join('')}</div></div>`;
+}
+function setChoice(key,value){
+  state[key]=value;
+  document.querySelectorAll(`[data-choice-key="${key}"]`).forEach(btn=>{
+    btn.classList.toggle('selected', String(btn.dataset.choiceValue)===String(value));
+  });
+}
+function setup(){app.innerHTML=`<div class="setup"><header><button class="iconBtn" onclick="state.screen='home';render()">✕</button><div class="brand"><div class="logo">✦</div><b>VYRA</b></div><span>CLASS SETUP</span></header><main class="setupInner"><div class="setupHead"><div class="eyebrow">PERSONALIZE YOUR CLASS</div><h1>${state.topic}</h1><p>Choose your level, depth, class time, language and tutor voice.</p></div>${choice('Your level',['Class 10','Class 11','Class 12','JEE','NEET'],'level')}${choice('How deep?',['Quick','Deep','Mastery'],'depth')}${choice('Class time',['15','30','45','60'],'mins',true)}<div class="choice"><div class="choiceLabel">Choose class language</div><div class="languageCards">${classLanguages.map(l=>`<div class="langCard ${state.language===l.id?'selected':''}" data-language="${l.id}"><button type="button" class="langPlay" onclick="event.stopPropagation();previewLanguage('${l.id}')" aria-label="Play ${l.label} sample">▶</button><button type="button" class="langName" onclick="event.stopPropagation();setLanguage('${l.id}')">${l.label}</button></div>`).join('')}</div><div class="voiceHint">Tap ▶ to hear the tutor sample, then tap the language name to select it.</div></div><div class="choice"><div class="choiceLabel">Tutor voice</div><div class="voiceSetup"><select id="setupVoice" onchange="setVoiceName(this.value)">${voiceOptions()}</select><div class="voiceHint">Choose the voice available on your phone/browser. The selected language now controls tutor speech and doubt recognition.</div></div></div><button class="startBtn" onclick="begin()">Start class　▶</button></main></div>`}
+function bindSetupChoices(){
+  const setupRoot=document.querySelector('.setup');
+  if(!setupRoot || setupRoot.dataset.choicesBound==='1') return;
+  setupRoot.dataset.choicesBound='1';
+  const activate=(e)=>{
+    const btn=e.target.closest('[data-choice-key]');
+    if(!btn || !setupRoot.contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const key=btn.dataset.choiceKey;
+    const raw=btn.dataset.choiceValue;
+    setChoice(key, key==='mins' ? Number(raw) : raw);
+  };
+  setupRoot.addEventListener('click',activate);
+  setupRoot.addEventListener('touchend',activate,{passive:false});
+  const selectLang=(e)=>{
+    const card=e.target.closest('[data-language]');
+    if(!card || !setupRoot.contains(card) || e.target.closest('.langPlay')) return;
+    setLanguage(card.dataset.language);
+  };
+  setupRoot.addEventListener('click',selectLang);
+}
+function setLanguage(v){state.language=v;state.languageVoice='auto';render()}
+function previewLanguage(id){
+  const item=classLanguages.find(x=>x.id===id); if(!item) return;
+  if('speechSynthesis' in window){
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(item.sample);
+    u.lang=item.lang;
+    u.rate=.86; u.pitch=.82;
+    const vs=speechSynthesis.getVoices();
+    const v=vs.find(x=>x.lang.toLowerCase().startsWith(item.lang.split('-')[0].toLowerCase()));
+    if(v)u.voice=v;
+    speechSynthesis.speak(u);
+  }
+}
+function voiceOptions(){
+  if(!('speechSynthesis'in window))return `<option value="auto">Default device voice</option>`;
+  const vs=speechSynthesis.getVoices();
+  if(!vs.length)return `<option value="auto">Default / voices loading…</option>`;
+  const opts=[`<option value="auto"${state.voiceName==='auto'?' selected':''}>Auto · recommended</option>`];
+  vs.filter(v=>/^(en|hi|ta|te)/i.test(v.lang)).forEach(v=>opts.push(`<option value="${encodeURIComponent(v.name)}"${state.voiceName===v.name?' selected':''}>${v.name} · ${v.lang}</option>`));
+  return opts.join('');
+}
+function setVoiceName(v){state.voiceName=v==='auto'?'auto':decodeURIComponent(v);render()}
+function changeSpeed(delta){
+  state.voiceRate=Math.min(1.2,Math.max(.5,(state.voiceRate||.82)+delta));
+  document.querySelectorAll('#speedValue').forEach(e=>e.textContent=state.voiceRate.toFixed(1)+'×');
+  // SpeechSynthesis cannot change rate on an utterance that is already speaking.
+  // Restart the current utterance at the new rate without advancing the lesson.
+  if(state.screen==='class' && state.currentSpeechText){
+    const text=state.currentSpeechText, after=state.currentSpeechAfter;
+    speechSynthesis?.cancel();
+    setTimeout(()=>speak(text,after),60);
+  }
+}
+async function begin(){
+  state.screen='class';state.slide=0;state.point=0;state.paused=false;state.chat=[];state.aiDeck=null;state.classLoading=true;render();enterFullScreen();
+  try{
+    const r=await fetch('/api/class',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:state.topic,level:state.level,depth:state.depth,mins:state.mins,language:state.language})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok||!Array.isArray(data.deck)||!data.deck.length) throw new Error(data.error||'Could not build the class');
+    state.aiDeck=data.deck;state.classLoading=false;render();setTimeout(()=>teachPoint(),350);
+  }catch(e){
+    console.error(e);state.classLoading=false;state.aiDeck=null;render();setTimeout(()=>teachPoint(),350);toast('AI class could not load, so VYRA used the built-in lesson.');
+  }
+}
+async function enterFullScreen(){try{await document.documentElement.requestFullscreen?.();if(screen.orientation?.lock)await screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}
+function exitClass(){speechSynthesis?.cancel();try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}state.screen='home';render()}
+function deck(){return state.aiDeck&&state.aiDeck.length?state.aiDeck:(lessons[state.topic]||generic)}function current(){return deck()[state.slide%deck().length]}
+function classroom(){const c=current();const pct=((state.slide+state.point/(c.points?.length||1))/deck().length)*100;app.innerHTML=`<div class="classroom" id="classroom">${state.classLoading?'<div class="toast" style="bottom:auto;top:50%;">VYRA is building your NCERT-focused class…</div>':''}<div class="classTop"><div class="classMeta"><div class="brand"><div class="logo">✦</div><b>VYRA</b></div><span class="level">${state.level} · ${state.depth}</span></div><div class="progress"><i style="width:${pct}%"></i></div><button class="iconBtn exit" onclick="exitClass()">×</button></div><div class="lessonSurface"><div class="lessonBoard"><div class="boardHeader"><span class="boardTag">LIVE CLASS · ${c.title.toUpperCase()}</span><span class="teacherState" id="teacherState">Preparing the explanation…</span></div>${visual(c.visual)}<div class="chalkArea"><div class="slideTitle">${escapeHtml(c.title)}</div><div class="noteStack" id="noteStack"></div></div></div></div><div class="speakingBar"><div class="speaking"><span class="wave"><i></i><i></i><i></i><i></i></span><span id="speakState">VYRA is teaching</span></div></div><button class="doubtBtn" onclick="toggleDoubt()">🎙 Ask a doubt</button><button class="voiceBadge" onclick="toggleVoiceMenu()">🎙 <b>Tutor voice</b></button><div class="voiceMenu" id="voiceMenu"><label>TUTOR VOICE</label><select onchange="state.voicePitch=this.value==='deep'?.82:.94;state.voiceRate=this.value==='deep'?.82:.86"><option value="clear">Clear · professional</option><option value="deep">Deep · clear</option><option value="balanced">Balanced · clear</option></select><div class="speedRow"><span>Speed</span><b id="speedVal">0.92×</b></div><input type="range" min="0.70" max="1.00" step="0.01" value="0.92" oninput="setVoiceRate(this.value)"><div class="speedRow"><span>Depth</span><b id="pitchVal">0.92</b></div><input type="range" min="0.60" max="1.00" step="0.01" value="0.92" oninput="setVoicePitch(this.value)"></div><aside class="doubtPanel" id="doubtPanel"><div class="doubtHead"><span>◌ Doubt with your tutor</span><span class="live">● LIVE</span></div><div class="chat" id="chat">${state.chat.length?state.chat.map(m=>`<div class="msg ${m.r}"><p>${m.t}</p></div>`).join(''):`<div class="empty"><b>Yes Rohit, what's your doubt?</b><p>Tap the microphone and speak naturally. I’ll explain using the current lesson context.</p></div>`}</div><div class="ask"><input id="ask" placeholder="Optional text input" onkeydown="if(event.key==='Enter')sendText()"><button id="mic" onclick="voice()">🎙</button><div class="speedControl"><span>Speed</span><button onclick="changeSpeed(-.1)">−</button><b id="speedValue">${(state.voiceRate||.82).toFixed(1)}×</b><button onclick="changeSpeed(.1)">+</button></div><button onclick="sendText()">➜</button></div></aside></div>`;setTimeout(()=>restorePoints(),40)}
+function noteDetail(point,sub){
+  if(sub && String(sub).trim()) return String(sub);
+  const t=state.topic.toLowerCase();
+  if(/chemical|bond|atom|electron/.test(t)){
+    if(/stable|stability/i.test(point)) return `${sub} In bonding, atoms tend toward arrangements that are energetically more favorable. This stability idea helps explain why different atoms form different types of bonds.`;
+    if(/valence/i.test(point)) return `${sub} These outer-shell electrons are the main participants in bonding. Their number strongly influences whether an atom tends to lose, gain, or share electrons.`;
+    if(/energy/i.test(point)) return `${sub} Lower-energy arrangements are generally more stable. This gives us a useful way to understand bonding instead of memorising isolated rules. It also helps explain why atoms can prefer one bonding arrangement over another.`;
+    if(/octet|eight/i.test(point)) return `${sub} The octet idea is a useful model for many main-group compounds. It helps predict common bonding patterns, while remembering that important exceptions exist. So use it as a prediction tool first, then check the actual structure when needed.`;
+    if(/transfer/i.test(point)) return `${sub} Electron transfer produces charged particles called ions. Their opposite charges create electrostatic attraction, which is the basis of ionic bonding.`;
+    if(/opposite|attract/i.test(point)) return `${sub} Positive and negative ions attract each other through electrostatic force. In a solid, this attraction acts throughout an ordered structure. This collective arrangement is why ionic bonding is better understood as a lattice, not just one pair of ions.`;
+    if(/lattice/i.test(point)) return `${sub} Ions arrange in a repeating three-dimensional lattice. The overall structure helps explain several characteristic properties of ionic solids.`;
+    if(/covalent|shared/i.test(point)) return `${sub} In covalent bonding, atoms share electron pairs rather than completely transferring electrons. The shared electrons are attracted to both nuclei. That shared attraction is what helps keep the bonded atoms together.`;
+    if(/lewis/i.test(point)) return `${sub} Lewis structures provide a simple way to represent valence electrons and shared pairs. They are useful for visualising common covalent bonding patterns.`;
+  }
+  if(/photo|plant|chlorophyll/.test(t)){
+    if(/light/i.test(point)) return `${sub} Light provides the energy that drives the process. The captured energy is converted into chemical forms that the cell can use. This is why light is an energy input, not simply a raw material.`;
+    if(/carbon dioxide|water/i.test(point)) return `${sub} Carbon dioxide and water provide important raw materials. Through several linked reactions, these inputs contribute to the formation of organic molecules.`;
+    if(/chemical energy|organic/i.test(point)) return `${sub} The captured light energy is stored in chemical form. This stored energy supports the formation and maintenance of organic molecules in the plant.`;
+    if(/ATP|NADPH/i.test(point)) return `${sub} ATP provides usable chemical energy, while NADPH provides reducing power. Both are important for the reactions that follow. Keeping their roles separate makes the next stage much easier to understand.`;
+    if(/carbon dioxide enters/i.test(point)) return `${sub} Carbon dioxide supplies the carbon atoms that are incorporated into organic molecules. This is a key step in turning an inorganic carbon source into useful biological material.`;
+  }
+  return `${sub} This is an important part of the concept. Keep the relationship between the idea and its example in mind so you can apply it instead of only memorising the definition. The goal is to understand why it works, so you can recognise the same idea in a new question.`;
+}
+function renderNote(i,p,sub,active=false){
+  const d=document.createElement('div');
+  d.id=active?'activePoint':'';
+  d.className=`concept ${active?'active':'visible complete'}`;
+  d.innerHTML=`<div class="row"><span class="bullet">${i+1}.</span><div><div class="point">${p}</div><div class="detail">${noteDetail(p,sub)}</div></div></div>`;
+  return d;
+}
+function restorePoints(){const c=current();const box=document.getElementById('noteStack');if(!box)return;box.innerHTML='';for(let i=0;i<state.point;i++){const [p,sub]=c.points[i];box.appendChild(renderNote(i,p,sub,false))}if(state.point<c.points.length){const [p,sub]=c.points[state.point];box.appendChild(renderNote(state.point,p,sub,true))}}
+function visual(type){if(type==='none')return '';const common=`<div class="visualBack show"><svg viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet">`;
+if(type==='octet')return common+`<g class="thin"><circle cx="600" cy="350" r="120"/><ellipse cx="600" cy="350" rx="290" ry="115" transform="rotate(25 600 350)"/><ellipse cx="600" cy="350" rx="290" ry="115" transform="rotate(-25 600 350)"/></g><g class="dot"><circle cx="600" cy="350" r="18"/></g></svg></div>`;
+if(type==='ionic')return common+`<g class="faint"><circle cx="450" cy="350" r="72"/><circle cx="750" cy="350" r="72"/><path d="M530 350 H670"/></g><text x="430" y="365" class="label">+</text><text x="730" y="365" class="label">−</text></svg></div>`;
+if(type==='covalent')return common+`<g class="faint"><circle cx="520" cy="350" r="95"/><circle cx="680" cy="350" r="95"/><circle cx="600" cy="350" r="42"/></g><path class="thin" d="M570 350 H630"/></svg></div>`;
+if(type==='photo')return common+`<g class="thin"><circle cx="600" cy="350" r="130"/><path d="M600 220 V480 M470 350 H730"/><path d="M520 280 C570 240 630 240 680 280 M520 420 C570 460 630 460 680 420"/></g><text x="505" y="345" class="label">LIGHT</text></svg></div>`;
+if(type==='light')return common+`<g class="thin"><path d="M330 350 H520"/><path d="M680 350 H870"/><path d="M520 300 L680 300 M520 400 L680 400"/><circle cx="600" cy="350" r="35"/></g><text x="355" y="330" class="label">hν</text></svg></div>`;
+return common+`<g class="thin"><circle cx="600" cy="350" r="150"/><path d="M600 200 L640 260 L600 255 M750 350 L690 390 L695 350 M600 500 L560 440 L600 445 M450 350 L510 310 L505 350"/></g></svg></div>`;
+}
+function pickTutorVoice(){
+  const vs=speechSynthesis.getVoices();if(!vs.length)return null;
+  const target=({English:'en',Hindi:'hi',Hinglish:'en',Tamil:'ta',Telugu:'te'})[state.language]||'en';
+  if(state.voiceName&&state.voiceName!=='auto'){
+    const exact=vs.find(v=>v.name===state.voiceName);
+    if(exact&&vCompatible(exact,target))return exact;
+  }
+  const compatible=vs.filter(v=>vCompatible(v,target));
+  const preferred=['Microsoft Guy Online (Natural)','Microsoft Ryan Online (Natural)','Microsoft Mark - English (United States)','Google UK English Male','Google US English Male','Google UK English','Alex','Daniel'];
+  return compatible.find(v=>preferred.some(n=>v.name.toLowerCase().includes(n.toLowerCase())))
+    ||compatible.find(v=>/natural|enhanced|premium|google|microsoft/i.test(v.name))
+    ||compatible.find(v=>/male|guy|ryan|daniel|alex/i.test(v.name))
+    ||compatible[0]||null;
+}
+function vCompatible(v,target){return v.lang.toLowerCase().startsWith(target.toLowerCase())}
+function hinglishText(text){
+  let x=text;
+  const exact={
+    'Atoms do not bond randomly. They bond because the combined arrangement can be more stable and lower in energy.':'Atoms randomly bond nahi karte. Bond tab banta hai jab combined arrangement zyada stable aur lower energy wala ho.',
+    'Think of stability as the main reason, and we will build everything else from that idea.':'Stability ko main idea samjho; isi idea se hum baaki bonding ko build karenge.',
+    'Atoms form bonds to become more stable.':'Atoms more stable hone ke liye bonds form karte hain.',
+    'Stability is the big idea behind bonding.':'Bonding ke peeche sabse important idea stability hai.',
+    'Valence electrons control most bonding behavior.':'Valence electrons bonding ke behaviour ko largely control karte hain.',
+    'The outermost electrons are the ones that usually participate.':'Sabse outer shell ke electrons hi usually bonding mein participate karte hain.',
+    'Lower energy generally means greater stability.':'Generally, lower energy ka matlab greater stability hota hai.',
+    'A system tends to move toward arrangements that are energetically favorable.':'System generally aise arrangement ki taraf move karta hai jo energetically more favorable ho.',
+    'Light energy is captured.':'Light energy capture hoti hai.',
+    'Light provides the energy that starts the process.':'Light woh energy provide karti hai jo process ko start karti hai.',
+    'Carbon dioxide and water provide raw materials.':'Carbon dioxide aur water raw materials provide karte hain.',
+    'Chemical energy is stored in organic molecules.':'Chemical energy organic molecules mein store hoti hai.',
+    'Light energizes electrons.':'Light electrons ko energy deti hai.',
+    'ATP and NADPH are produced.':'ATP aur NADPH produce hote hain.',
+    'The products feed the next stage.':'Ye products next stage mein use hote hain.',
+    'Carbon dioxide enters the cycle.':'Carbon dioxide cycle mein enter karta hai.',
+    'ATP supplies energy.':'ATP energy supply karta hai.',
+    'NADPH supplies reducing power.':'NADPH reducing power provide karta hai.'
+  };
+  Object.keys(exact).sort((a,b)=>b.length-a.length).forEach(k=>{x=x.split(k).join(exact[k])});
+  x=x.replace(/\bNow look only at the outer shell\b/gi,'Ab sirf outer shell ko dekho')
+       .replace(/\bNow\b/gi,'Ab')
+       .replace(/\bFirst\b/gi,'Sabse pehle')
+       .replace(/\bTherefore\b/gi,'Isliye')
+       .replace(/\bThis is\b/gi,'Ye hai')
+       .replace(/\bThis means\b/gi,'Iska matlab hai')
+       .replace(/\bFor example\b/gi,'For example')
+       .replace(/\bbecause\b/gi,'kyunki')
+       .replace(/\bwhen\b/gi,'jab')
+       .replace(/\bwhich\b/gi,'jo')
+       .replace(/\bcalled\b/gi,'kehte hain');
+  return x;
+}
+function localizedSpeech(text){
+  if(state.aiDeck) return text;
+  if(state.language==='English')return text;
+  if(state.language==='Hinglish')return hinglishText(text);
+  const maps={
+    Hindi:{
+      'Atoms do not bond randomly. They bond because the combined arrangement can be more stable and lower in energy. Think of stability as the main reason, and we will build everything else from that idea.':'Atoms random tareeke se bond nahi banate. Bond isliye banta hai kyunki combined arrangement zyada stable aur lower energy wala ho sakta hai. Stability ko main reason samjho, aur hum isi idea se aage badhenge.',
+      'Atoms form bonds to become more stable.':'Atoms zyada stable hone ke liye bonds banate hain.',
+      'Stability is the big idea behind bonding.':'Bonding ke peeche sabse important idea stability hai.',
+      'Valence electrons control most bonding behavior.':'Valence electrons bonding ke behaviour ko largely control karte hain.',
+      'The outermost electrons are the ones that usually participate.':'Sabse bahar wale electrons hi usually bonding mein participate karte hain.',
+      'Lower energy generally means greater stability.':'Generally, lower energy ka matlab greater stability hota hai.',
+      'A system tends to move toward arrangements that are energetically favorable.':'System aise arrangement ki taraf jaata hai jo energy ke hisaab se favorable ho.',
+      'Now look only at the outer shell. For many main-group atoms, a filled valence shell is associated with increased stability. The octet rule is a useful model, but it has important exceptions.':'Ab sirf outer shell ko dekho. Bahut se main-group atoms mein filled valence shell greater stability se associated hota hai. Octet rule ek useful model hai, lekin iske important exceptions bhi hain.',
+      'Many atoms tend toward a stable valence shell.':'Bahut se atoms stable valence shell ki taraf tend karte hain.',
+      'We use this model to predict common bonding patterns.':'Is model ka use hum common bonding patterns predict karne ke liye karte hain.',
+      'Eight valence electrons is a useful main-group model.':'Eight valence electrons main-group atoms ke liye ek useful model hai.',
+      'This is the familiar octet idea.':'Ye wahi familiar octet idea hai.',
+      'The octet rule is a guide, not an absolute law.':'Octet rule ek guide hai, absolute law nahi.',
+      'Later, we will meet cases where this simple rule needs modification.':'Aage hum aise cases dekhenge jahan is simple rule ko modify karna padta hai.',
+      'Here the key event is electron transfer. One atom can lose electrons while another gains them. The resulting ions have opposite charges, so they attract and form an ionic structure.':'Yahan main event electron transfer hai. Ek atom electrons lose kar sakta hai, jabki doosra gain karta hai. Resulting ions ke opposite charges hote hain, isliye woh attract karke ionic structure banate hain.',
+      'Electron transfer can create ions.':'Electron transfer ions create kar sakta hai.',
+      'Loss creates a positive ion; gain creates a negative ion.':'Electron lose karne se positive ion, aur gain karne se negative ion banta hai.',
+      'Opposite charges attract.':'Opposite charges ek doosre ko attract karte hain.',
+      'This electrostatic attraction is central to ionic bonding.':'Ye electrostatic attraction ionic bonding ka central idea hai.',
+      'Ionic solids form repeating lattices.':'Ionic solids repeating lattices banate hain.',
+      'The particles arrange into a strong, ordered structure.':'Particles ek strong aur ordered structure mein arrange hote hain.',
+      'Now imagine a different strategy: instead of transferring electrons, atoms share electron pairs. Those shared electrons are attracted to both nuclei, creating a covalent bond.':'Ab ek different strategy imagine karo: electrons transfer karne ke bajay atoms electron pairs share karte hain. Ye shared electrons dono nuclei ko attract hote hain, aur covalent bond banta hai.',
+      'Covalent bonds involve shared electron pairs.':'Covalent bonds mein shared electron pairs hote hain.',
+      'Sharing lets both atoms participate in the bonding pair.':'Sharing ki wajah se dono atoms bonding pair mein participate karte hain.',
+      'Shared electrons are attracted to both nuclei.':'Shared electrons dono nuclei ko attract hote hain.',
+      'That attraction helps hold the atoms together.':'Ye attraction atoms ko saath hold karne mein help karta hai.',
+      'Lewis structures represent shared electrons.':'Lewis structures shared electrons ko represent karte hain.',
+      'They give us a simple visual language for covalent bonding.':'Ye covalent bonding ko samajhne ke liye ek simple visual language dete hain.',
+      'Photosynthesis is the process by which photosynthetic organisms capture light energy and store it as chemical energy. We will separate the process into inputs, energy capture, and carbon fixation.':'Photosynthesis woh process hai jisme photosynthetic organisms light energy ko capture karke chemical energy ke roop mein store karte hain. Hum is process ko inputs, energy capture aur carbon fixation mein samjhenge.',
+      'Light energy is captured.':'Light energy capture ki jaati hai.',
+      'Light provides the energy that starts the process.':'Light woh energy provide karti hai jo process ko start karti hai.',
+      'Carbon dioxide and water provide raw materials.':'Carbon dioxide aur water raw materials provide karte hain.',
+      'These inputs are transformed through several reactions.':'Ye inputs several reactions ke through transform hote hain.',
+      'Chemical energy is stored in organic molecules.':'Chemical energy organic molecules mein store hoti hai.',
+      'The captured energy ultimately supports the formation of carbohydrate.':'Captured energy ultimately carbohydrate formation ko support karti hai.',
+      'Light energizes electrons and drives reactions that produce ATP and NADPH. These molecules then carry usable chemical energy into the next stage.':'Light electrons ko energize karti hai aur aisi reactions drive karti hai jo ATP aur NADPH produce karti hain. Ye molecules usable chemical energy ko next stage tak le jaate hain.',
+      'Light energizes electrons.':'Light electrons ko energize karti hai.',
+      'Photons provide the energy for electron excitation.':'Photons electron excitation ke liye energy provide karte hain.',
+      'ATP and NADPH are produced.':'ATP aur NADPH produce hote hain.',
+      'They act as chemical energy and reducing-power carriers.':'Ye chemical energy aur reducing power ke carriers ki tarah kaam karte hain.',
+      'The products feed the next stage.':'Ye products next stage ko feed karte hain.',
+      'The energy carriers are then used for carbon fixation.':'Ye energy carriers phir carbon fixation mein use hote hain.',
+      'The Calvin cycle uses ATP and NADPH to help incorporate carbon dioxide into organic molecules. The important idea is that carbon is being built into a usable form.':'Calvin cycle ATP aur NADPH ka use karke carbon dioxide ko organic molecules mein incorporate karne mein help karta hai. Important idea ye hai ki carbon ko usable form mein build kiya ja raha hai.',
+      'Carbon dioxide enters the cycle.':'Carbon dioxide cycle mein enter karta hai.',
+      'This is the carbon source for building organic molecules.':'Ye organic molecules build karne ke liye carbon source hai.',
+      'ATP supplies energy.':'ATP energy supply karta hai.',
+      'Energy is spent to drive the reactions.':'Reactions ko drive karne ke liye energy spend hoti hai.',
+      'NADPH supplies reducing power.':'NADPH reducing power supply karta hai.',
+      'Together, these resources help form carbohydrate precursors.':'Together, ye resources carbohydrate precursors form karne mein help karte hain.',
+      'Here is the picture to keep in your head: atoms are trying to reach a more stable electron arrangement.':'Apne dimaag mein ye picture rakho: atoms ek zyada stable electron arrangement tak pahunchne ki koshish karte hain.',
+      'Think of the plant like a tiny energy factory: light provides the energy, and the plant uses that energy to build food.':'Plant ko ek tiny energy factory ki tarah socho: light energy deti hai, aur plant us energy ka use food banane mein karta hai.',
+      'Think of this like a puzzle: every step we take should preserve the equality while making the unknown easier to see.':'Isko puzzle ki tarah socho: har step equality ko preserve kare aur unknown ko samajhna easy banaye.',
+      'Exam connection: watch for how this idea is used inside a question, not just as a definition.':'Exam connection: dekho ki ye idea question ke andar kaise use hota hai, sirf definition ki tarah yaad mat karo.',
+      'Quick check: if I changed the example, could you still explain the same idea in your own words?':'Quick check: agar main example badal doon, kya tum same idea ko apne words mein explain kar sakte ho?',
+      'Now go one layer deeper: ask what would change if the usual condition were removed.':'Ab ek layer deeper jao: socho ki usual condition hata dein to kya change hoga.',
+      'Keep that core idea; we will not overload you with extra detail yet.':'Core idea ko pakad ke rakho; abhi hum extra details se overload nahi karenge.',
+      'The deeper reason is what makes this easier to remember than a memorised sentence.':'Deeper reason samajhna ise memorised sentence se zyada easy banata hai.'
+    },
+    Tamil:{
+      'Atoms form bonds to become more stable.':'அணுக்கள் அதிக நிலைத்தன்மையைப் பெற பிணைப்புகளை உருவாக்குகின்றன.',
+      'Stability is the big idea behind bonding.':'பிணைப்பின் பின்னால் இருக்கும் முக்கிய கருத்து நிலைத்தன்மை.',
+      'Valence electrons control most bonding behavior.':'வேலன்ஸ் எலக்ட்ரான்கள் பெரும்பாலான பிணைப்பு நடத்தையை கட்டுப்படுத்துகின்றன.',
+      'Light energy is captured.':'ஒளி ஆற்றல் பிடிக்கப்படுகிறது.',
+      'Light provides the energy that starts the process.':'இந்த செயல்முறையைத் தொடங்கும் ஆற்றலை ஒளி வழங்குகிறது.',
+      'Carbon dioxide and water provide raw materials.':'கார்பன் டைஆக்சைடும் நீரும் மூலப்பொருட்களை வழங்குகின்றன.',
+      'Chemical energy is stored in organic molecules.':'வேதியியல் ஆற்றல் கரிம மூலக்கூறுகளில் சேமிக்கப்படுகிறது.',
+      'ATP and NADPH are produced.':'ATP மற்றும் NADPH உருவாகின்றன.',
+      'Carbon dioxide enters the cycle.':'கார்பன் டைஆக்சைடு சுழற்சிக்குள் நுழைகிறது.',
+      'ATP supplies energy.':'ATP ஆற்றலை வழங்குகிறது.',
+      'NADPH supplies reducing power.':'NADPH குறைப்புத் திறனை வழங்குகிறது.',
+      'Opposite charges attract.':'எதிர் மின்னூட்டங்கள் ஒன்றையொன்று ஈர்க்கின்றன.',
+      'Electron transfer can create ions.':'எலக்ட்ரான் பரிமாற்றம் அயன்களை உருவாக்கலாம்.',
+      'Covalent bonds involve shared electron pairs.':'கோவலென்ட் பிணைப்புகளில் பகிரப்பட்ட எலக்ட்ரான் ஜோடிகள் உள்ளன.',
+      'Light energizes electrons.':'ஒளி எலக்ட்ரான்களுக்கு ஆற்றலை அளிக்கிறது.',
+      'The products feed the next stage.':'இந்த தயாரிப்புகள் அடுத்த கட்டத்திற்கு பயன்படுகின்றன.',
+      'This is the carbon source for building organic molecules.':'கரிம மூலக்கூறுகளை உருவாக்குவதற்கான கார்பன் மூலமாக இது செயல்படுகிறது.',
+      'Energy is spent to drive the reactions.':'வினைகளை இயக்க ஆற்றல் பயன்படுத்தப்படுகிறது.',
+      'Here is the picture to keep in your head: atoms are trying to reach a more stable electron arrangement.':'மனதில் இந்த படத்தை வைத்துக்கொள்ளுங்கள்: அணுக்கள் அதிக நிலையான எலக்ட்ரான் அமைப்பை அடைய முயல்கின்றன.',
+      'Think of the plant like a tiny energy factory: light provides the energy, and the plant uses that energy to build food.':'தாவரத்தை ஒரு சிறிய ஆற்றல் தொழிற்சாலை போல நினைத்துக்கொள்ளுங்கள்: ஒளி ஆற்றலை வழங்குகிறது, தாவரம் அந்த ஆற்றலை உணவு உருவாக்க பயன்படுத்துகிறது.',
+      'Exam connection: watch for how this idea is used inside a question, not just as a definition.':'தேர்வு தொடர்பு: இந்த கருத்து ஒரு கேள்வியில் எப்படி பயன்படுத்தப்படுகிறது என்பதை கவனியுங்கள்; வரையறையாக மட்டும் மனப்பாடம் செய்ய வேண்டாம்.',
+      'Quick check: if I changed the example, could you still explain the same idea in your own words?':'சிறு சரிபார்ப்பு: நான் உதாரணத்தை மாற்றினாலும் இதே கருத்தை உங்கள் சொந்த வார்த்தைகளில் விளக்க முடியுமா?'
+    },
+    Telugu:{
+      'Atoms form bonds to become more stable.':'అణువులు మరింత స్థిరంగా మారడానికి బంధాలను ఏర్పరుస్తాయి.',
+      'Stability is the big idea behind bonding.':'బంధాల వెనుక ఉన్న ప్రధాన ఆలోచన స్థిరత్వం.',
+      'Valence electrons control most bonding behavior.':'వాలెన్స్ ఎలక్ట్రాన్లు ఎక్కువ భాగం బంధన ప్రవర్తనను నియంత్రిస్తాయి.',
+      'Light energy is captured.':'కాంతి శక్తిని గ్రహిస్తారు.',
+      'Light provides the energy that starts the process.':'ఈ ప్రక్రియను ప్రారంభించే శక్తిని కాంతి అందిస్తుంది.',
+      'Carbon dioxide and water provide raw materials.':'కార్బన్ డయాక్సైడ్ మరియు నీరు ముడి పదార్థాలను అందిస్తాయి.',
+      'Chemical energy is stored in organic molecules.':'రసాయన శక్తి సేంద్రీయ అణువుల్లో నిల్వ చేయబడుతుంది.',
+      'ATP and NADPH are produced.':'ATP మరియు NADPH ఉత్పత్తి అవుతాయి.',
+      'Carbon dioxide enters the cycle.':'కార్బన్ డయాక్సైడ్ చక్రంలోకి ప్రవేశిస్తుంది.',
+      'ATP supplies energy.':'ATP శక్తిని అందిస్తుంది.',
+      'NADPH supplies reducing power.':'NADPH రిడ్యూసింగ్ పవర్‌ను అందిస్తుంది.',
+      'Opposite charges attract.':'వ్యతిరేక విద్యుత్ ఛార్జీలు ఒకదానిని మరొకటి ఆకర్షిస్తాయి.',
+      'Electron transfer can create ions.':'ఎలక్ట్రాన్ బదిలీ అయాన్లను సృష్టించగలదు.',
+      'Covalent bonds involve shared electron pairs.':'కోవాలెంట్ బంధాల్లో పంచుకున్న ఎలక్ట్రాన్ జంటలు ఉంటాయి.',
+      'Light energizes electrons.':'కాంతి ఎలక్ట్రాన్లకు శక్తిని ఇస్తుంది.',
+      'The products feed the next stage.':'ఈ ఉత్పత్తులు తదుపరి దశకు ఉపయోగపడతాయి.',
+      'This is the carbon source for building organic molecules.':'సేంద్రీయ అణువులను నిర్మించడానికి ఇది కార్బన్ మూలం.',
+      'Energy is spent to drive the reactions.':'ప్రతిచర్యలను నడపడానికి శక్తి ఉపయోగించబడుతుంది.',
+      'Here is the picture to keep in your head: atoms are trying to reach a more stable electron arrangement.':'ఈ చిత్రాన్ని మనసులో ఉంచుకోండి: అణువులు మరింత స్థిరమైన ఎలక్ట్రాన్ అమరికను చేరడానికి ప్రయత్నిస్తాయి.',
+      'Think of the plant like a tiny energy factory: light provides the energy, and the plant uses that energy to build food.':'మొక్కను ఒక చిన్న ఎనర్జీ ఫ్యాక్టరీలా ఊహించుకోండి: కాంతి శక్తిని ఇస్తుంది, మొక్క ఆ శక్తిని ఆహారం తయారు చేయడానికి ఉపయోగిస్తుంది.',
+      'Exam connection: watch for how this idea is used inside a question, not just as a definition.':'పరీక్షలో ఈ ఆలోచన ప్రశ్నలో ఎలా ఉపయోగించబడుతుందో గమనించండి; నిర్వచనంగా మాత్రమే గుర్తుపెట్టుకోకండి.',
+      'Quick check: if I changed the example, could you still explain the same idea in your own words?':'చిన్న చెక్: నేను ఉదాహరణను మార్చినా ఇదే ఆలోచనను మీ స్వంత మాటల్లో వివరించగలరా?'
+    }
+  };
+  const map=maps[state.language];
+  if(!map)return text;
+  const keys=Object.keys(map).sort((a,b)=>b.length-a.length);
+  let out=text;
+  for(const k of keys)out=out.split(k).join(map[k]);
+  return out;
+}
+function cleanSpeechText(text){
+  return String(text||'').replace(/[*_#`]/g,'').replace(/^\s*[-•]\s*/gm,'').replace(/\s+/g,' ').trim();
+}
+function speak(text,after){
+  if(!('speechSynthesis'in window)){after?.();return}
+  const token=++state.speechToken;
+  state.currentSpeechText=text;
+  state.currentSpeechAfter=after;
+  speechSynthesis.cancel();
+  const lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';
+  const make=(useVoice)=>{
+    const spoken=cleanSpeechText(localizedSpeech(text));
+    const u=new SpeechSynthesisUtterance(spoken);
+    u.lang=lang;u.rate=Math.min(1.05,Math.max(.72,state.voiceRate||.92));u.pitch=Math.min(1.05,Math.max(.75,state.voicePitch||.90));u.volume=1;
+    if(useVoice){const v=pickTutorVoice();if(v)u.voice=v}
+    return u;
+  };
+  let retried=false, startedAt=0, watchdog=null;
+  const cleanup=()=>{if(watchdog)clearInterval(watchdog);watchdog=null};
+  const finish=()=>{cleanup();if(token===state.speechToken)after?.()};
+  const u=make(true);
+  u.onstart=()=>{if(token!==state.speechToken)return;startedAt=Date.now();const e=document.getElementById('teacherState');if(e)e.textContent='Explaining naturally…';
+    // Android/Chrome speech engines can pause or stall during a longer utterance.
+    watchdog=setInterval(()=>{if(token===state.speechToken&&speechSynthesis.speaking&&!speechSynthesis.paused)speechSynthesis.resume()},7000);
+  };
+  u.onend=finish;
+  u.onerror=()=>{
+    cleanup();
+    if(token!==state.speechToken)return;
+    if(!retried){retried=true;setTimeout(()=>{if(token!==state.speechToken)return;const f=make(false);f.onend=finish;f.onerror=finish;speechSynthesis.speak(f)},80)}
+    else finish();
+  };
+  // No artificial pause between points: the speech engine handles natural sentence rhythm.
+  setTimeout(()=>{if(token===state.speechToken)speechSynthesis.speak(u)},30);
+}
+function teacherFlow(point,extra,c){
+  if(/pyq|important questions|exam questions/i.test(c.title||'')) return `${point}. ${extra||''}`.trim();
+  if(state.depth==='Quick') return `${point}. ${extra||''}`.trim();
+  return `${point}. ${extra||''}`.trim();
+}
+function teachPoint(){
+  if(state.screen!=='class'||state.paused||state.classLoading)return;
+  const c=current();
+  if(state.point>=c.points.length){completeConcept();return}
+  restorePoints();
+  const active=document.getElementById('activePoint');active?.classList.add('visible');
+  const pointData=c.points[state.point]||[];
+  const point=pointData[0]||'';
+  const extra=pointData[1]||'';
+  const aiSpeech=pointData[2]||'';
+  const stateEl=document.getElementById('teacherState');
+  const speakEl=document.getElementById('speakState');
+  if(stateEl)stateEl.textContent='Explaining the next idea…';
+  if(speakEl)speakEl.textContent='VYRA is explaining';
+  const narration=aiSpeech||teacherFlow(point,extra,c);
+  speak(narration,()=>{
+    if(state.screen!=='class'||state.paused)return;
+    active?.classList.remove('active');active?.classList.add('complete');
+    state.point++;
+    if(state.point<c.points.length){setTimeout(teachPoint,650)}
+    else{setTimeout(completeConcept,850)}
+  });
+}
+function completeConcept(){const arr=deck();if(state.slide<arr.length-1){state.slide++;state.point=0;state.speechToken++;speechSynthesis?.cancel();render();const s=document.getElementById('speakState');if(s)s.textContent='Next slide…';setTimeout(teachPoint,650)}else{const s=document.getElementById('speakState');if(s)s.textContent='Lesson complete';speak('Excellent. You have completed this lesson. Take a moment to review the key ideas.')}}
+function toggleDoubt(){document.getElementById('doubtPanel')?.classList.toggle('open')}
+function sendText(){const i=document.getElementById('ask');const q=i.value.trim();if(q)handleDoubt(q);i.value=''}
+function handleDoubt(q){
+  state.paused=true;speechSynthesis?.cancel();
+  const c=current(); const lower=q.toLowerCase();
+  let answer=`Good question. Let’s connect it to ${c.title}. `;
+  if(/why|reason/.test(lower)) answer+=`The key reason is this: ${c.say}`;
+  else if(/example|real life|example/.test(lower)) answer+=`Use this mental model: ${teacherFlow(c.points[state.point]?.[0]||c.points[0][0],c.points[state.point]?.[1]||c.points[0][1],c)}`;
+  else answer+=`${c.say} Now put the doubt into your own words once; that is how I can check whether the idea is clear.`;
+  answer+=' Should we continue from exactly where we paused?';
+  state.chat.push({r:'student',t:q},{r:'ai',t:answer});
+  render();document.getElementById('doubtPanel')?.classList.add('open');
+  setTimeout(()=>speak(answer),120);
+}
+function voice(){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice input needs Chrome voice support');return}const R=window.SpeechRecognition||window.webkitSpeechRecognition,r=new R();r.lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';r.interimResults=false;r.maxAlternatives=1;r.onstart=()=>{state.listening=true;document.getElementById('mic')?.classList.add('listening');toast('Listening… speak your doubt')};r.onresult=e=>handleDoubt(e.results[0][0].transcript);r.onerror=()=>{state.listening=false;toast('I could not hear that clearly. Try again.')};r.onend=()=>{state.listening=false};r.start()}
+function toast(x){let d=document.createElement('div');d.className='toast';d.textContent=x;document.getElementById('classroom')?.appendChild(d);setTimeout(()=>d.remove(),1800)}
+if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>{if(state.screen==='setup')render()}}document.addEventListener('fullscreenchange',()=>{});render();
+</script><button id="vyraChatTab" type="button">AI Chat</button>
+<section id="vyraChatPanel">
+<header class="vch"><div><span class="brand">VYRA AI</span><span class="status">● Ready to teach</span></div><div><button id="vNew">New chat</button><button id="vClose">Close</button></div></header>
+<main id="vyraMsgs"><div id="vWelcome" style="text-align:center;margin-top:20vh"><h1>How can I help you learn?</h1><p>Ask a question, explain a concept, solve a problem, or go deeper.</p></div></main>
+<div class="vcomposer"><form class="vform" id="vForm"><textarea id="vInput" rows="1" placeholder="Ask VYRA anything about your studies..."></textarea><button>Send</button></form></div>
+</section><script id="vyra-chat-js">
+(()=>{
+const p=document.getElementById("vyraChatPanel"),tab=document.getElementById("vyraChatTab"),close=document.getElementById("vClose"),fresh=document.getElementById("vNew"),form=document.getElementById("vForm"),inp=document.getElementById("vInput"),msgs=document.getElementById("vyraMsgs");
+let history=[];
+function esc(x){return String(x).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+function add(role,t){let w=document.getElementById("vWelcome");if(w)w.remove();let d=document.createElement("div");d.className="vmsg "+role;d.innerHTML=role==="ai"?"<b>VYRA AI</b><br>"+t:esc(t);msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
+function ctx(){try{const s=window.VYRA_CLASS_STATE||{};return {topic:s.topic||"",level:s.level||"",depth:s.depth||"",language:s.language||"",classActive:s.screen==='class'}}catch(e){return {}}}
+function formatAIText(text){
+  let x=esc(text);
+  x=x.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  x=x.replace(/^#{1,4}\s*(.+)$/gm,'<strong>$1</strong>');
+  return x.replace(/\n/g,'<br>');
+}
+function reset(){history=[];msgs.innerHTML='<div id="vWelcome" style="text-align:center;margin-top:20vh"><h1>How can I help you learn?</h1><p>Ask a question, explain a concept, solve a problem, or go deeper.</p></div>';inp.focus()}
+async function answer(q){
+  const c=ctx();
+  const placeholder=add("ai",'<span class="vtyping">Thinking…</span>');
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history,context:c})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||('AI request failed ('+r.status+')'));
+    const text=String(data.answer||'').trim()||'I could not generate an answer. Please try again.';
+    placeholder.innerHTML='<b>VYRA AI</b><br>'+formatAIText(text);
+    history.push({role:'user',content:q},{role:'assistant',content:text});
+    if(history.length>20)history=history.slice(-20);
+  }catch(e){placeholder.innerHTML='<b>VYRA AI</b><br><span style="color:#ffb4b4">'+esc(e.message||'Could not reach the AI server.')+'</span>'}
+}
+form.addEventListener("submit",async e=>{e.preventDefault();let q=inp.value.trim();if(!q)return;inp.value="";add("user",q);await answer(q);});
+inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});
+tab.onclick=(e)=>{e.preventDefault();e.stopPropagation();if((window.VYRA_CLASS_STATE||{}).screen==='class')return;p.style.display="flex";inp.focus()};close.onclick=()=>p.style.display="none";fresh.onclick=reset;
+})();
+</script></body></html>

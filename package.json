@@ -1,0 +1,13 @@
+{
+  "name": "vyra-ai-classroom",
+  "version": "25.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "setup-corpus": "node scripts/ingest-ncert.mjs"
+  },
+  "dependencies": {
+    "pdf-parse": "^1.1.1"
+  }
+}
