@@ -164,7 +164,10 @@ function previewLanguage(id){
     u.lang=item.lang;
     u.rate=.86; u.pitch=.82;
     const vs=speechSynthesis.getVoices();
-    const v=vs.find(x=>x.lang.toLowerCase().startsWith(item.lang.split('-')[0].toLowerCase()));
+    const exact=vs.find(x=>x.lang.toLowerCase()===item.lang.toLowerCase());
+    const india=vs.find(x=>x.lang.toLowerCase().startsWith(item.lang.split('-')[0].toLowerCase()+'-in'));
+    const fallback=vs.find(x=>x.lang.toLowerCase().startsWith(item.lang.split('-')[0].toLowerCase()));
+    const v=exact||india||fallback;
     if(v)u.voice=v;
     speechSynthesis.speak(u);
   }
@@ -247,17 +250,19 @@ return common+`<g class="thin"><circle cx="600" cy="350" r="150"/><path d="M600 
 }
 function pickTutorVoice(){
   const vs=speechSynthesis.getVoices();if(!vs.length)return null;
-  const target=({English:'en',Hindi:'hi',Hinglish:'en',Tamil:'ta',Telugu:'te'})[state.language]||'en';
+  const target=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';
   if(state.voiceName&&state.voiceName!=='auto'){
     const exact=vs.find(v=>v.name===state.voiceName);
     if(exact&&vCompatible(exact,target))return exact;
   }
-  const compatible=vs.filter(v=>vCompatible(v,target));
-  const preferred=['Microsoft Guy Online (Natural)','Microsoft Ryan Online (Natural)','Microsoft Mark - English (United States)','Google UK English Male','Google US English Male','Google UK English','Alex','Daniel'];
-  return compatible.find(v=>preferred.some(n=>v.name.toLowerCase().includes(n.toLowerCase())))
-    ||compatible.find(v=>/natural|enhanced|premium|google|microsoft/i.test(v.name))
-    ||compatible.find(v=>/male|guy|ryan|daniel|alex/i.test(v.name))
-    ||compatible[0]||null;
+  // Prefer the Indian regional voice for the selected language so English/Hinglish
+  // sounds naturally Indian and Indian-language classes keep their native accent.
+  const exactLocale=vs.filter(v=>v.lang.toLowerCase()===target.toLowerCase());
+  const indian=vs.filter(v=>v.lang.toLowerCase().startsWith(target.split('-')[0].toLowerCase()+'-in'));
+  const compatible=vs.filter(v=>v.lang.toLowerCase().startsWith(target.split('-')[0].toLowerCase()));
+  const preferredIndian=['google','microsoft','natural','enhanced','premium','neerja','ravi','veena','heera','aditi'];
+  const chooseBest=(list)=>list.find(v=>preferredIndian.some(n=>v.name.toLowerCase().includes(n)))||list.find(v=>/natural|enhanced|premium/i.test(v.name))||list[0];
+  return chooseBest(exactLocale)||chooseBest(indian)||chooseBest(compatible)||null;
 }
 function vCompatible(v,target){return v.lang.toLowerCase().startsWith(target.toLowerCase())}
 function hinglishText(text){
