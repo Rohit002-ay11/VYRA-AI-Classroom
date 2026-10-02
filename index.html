@@ -198,14 +198,14 @@ async function begin(){
     const r=await fetch('/api/class',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:state.topic,level:state.level,depth:state.depth,mins:state.mins,language:state.language})});
     const data=await r.json().catch(()=>({}));
     if(!r.ok||!Array.isArray(data.deck)||!data.deck.length) throw new Error(data.error||'Could not build the class');
-    state.aiDeck=data.deck;state.classLoading=false;render();setTimeout(()=>teachPoint(),350);
+    state.aiDeck=data.deck;state.aiDeck.chapterCode=data.chapter?.code||"";state.classLoading=false;render();setTimeout(()=>teachPoint(),350);
   }catch(e){
-    console.error(e);state.classLoading=false;state.aiDeck=null;render();setTimeout(()=>teachPoint(),350);toast('AI class could not load, so VYRA used the built-in lesson.');
+    console.error(e);state.classLoading=false;state.aiDeck=null;render();toast('AI class could not load: '+(e?.message||'server error'));
   }
 }
 async function enterFullScreen(){try{await document.documentElement.requestFullscreen?.();if(screen.orientation?.lock)await screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}
 function exitClass(){stopTutorAudio();try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}state.screen='home';render()}
-function deck(){return state.aiDeck&&state.aiDeck.length?state.aiDeck:(lessons[state.topic]||generic)}function current(){return deck()[state.slide%deck().length]}
+function deck(){return state.aiDeck&&state.aiDeck.length?state.aiDeck:[]}function current(){const d=deck();return d.length?d[Math.min(state.slide,d.length-1)]:{title:'Class unavailable',say:'The AI class could not be loaded.',points:[['Please retry.','The class engine did not return a lesson.','']]}}
 function classroom(){const c=current();const pct=((state.slide+state.point/(c.points?.length||1))/deck().length)*100;app.innerHTML=`<div class="classroom" id="classroom">${state.classLoading?'<div class="toast" style="bottom:auto;top:50%;">VYRA is building your NCERT-focused class…</div>':''}<div class="classTop"><div class="classMeta"><div class="brand"><div class="logo">✦</div><b>VYRA</b></div><span class="level">${state.level} · ${state.depth}</span></div><div class="progress"><i style="width:${pct}%"></i></div><button class="iconBtn exit" onclick="exitClass()">×</button></div><div class="lessonSurface"><div class="lessonBoard"><div class="boardHeader"><span class="boardTag">LIVE CLASS · ${c.title.toUpperCase()}</span><span class="teacherState" id="teacherState">Preparing the explanation…</span></div>${visual(c.visual)}<div class="chalkArea"><div class="slideTitle">${escapeHtml(c.title)}</div><div class="noteStack" id="noteStack"></div></div></div></div><div class="speakingBar"><div class="speaking"><span class="wave"><i></i><i></i><i></i><i></i></span><span id="speakState">VYRA is teaching</span></div></div><button class="doubtBtn" onclick="toggleDoubt()">🎙 Ask a doubt</button><button class="voiceBadge" onclick="toggleVoiceMenu()">🎙 <b>Tutor voice</b></button><div class="voiceMenu" id="voiceMenu"><label>TUTOR VOICE</label><select onchange="state.voicePitch=this.value==='deep'?.82:.94;state.voiceRate=this.value==='deep'?.82:.86"><option value="clear">Clear · professional</option><option value="deep">Deep · clear</option><option value="balanced">Balanced · clear</option></select><div class="speedRow"><span>Speed</span><b id="speedVal">0.92×</b></div><input type="range" min="0.70" max="1.00" step="0.01" value="0.92" oninput="setVoiceRate(this.value)"><div class="speedRow"><span>Depth</span><b id="pitchVal">0.92</b></div><input type="range" min="0.60" max="1.00" step="0.01" value="0.92" oninput="setVoicePitch(this.value)"></div><aside class="doubtPanel" id="doubtPanel"><div class="doubtHead"><span>◌ Doubt with your tutor</span><span class="live">● LIVE</span></div><div class="chat" id="chat">${state.chat.length?state.chat.map(m=>`<div class="msg ${m.r}"><p>${m.t}</p></div>`).join(''):`<div class="empty"><b>Yes Rohit, what's your doubt?</b><p>Tap the microphone and speak naturally. I’ll explain using the current lesson context.</p></div>`}</div><div class="ask"><input id="ask" placeholder="Optional text input" onkeydown="if(event.key==='Enter')sendText()"><button id="mic" onclick="voice()">🎙</button><div class="speedControl"><span>Speed</span><button onclick="changeSpeed(-.1)">−</button><b id="speedValue">${(state.voiceRate||.82).toFixed(1)}×</b><button onclick="changeSpeed(.1)">+</button></div><button onclick="sendText()">➜</button></div></aside></div>`;setTimeout(()=>restorePoints(),40)}
 function noteDetail(point,sub){
   if(sub && String(sub).trim()) return String(sub);
@@ -498,17 +498,23 @@ function teachPoint(){
 function completeConcept(){const arr=deck();if(state.slide<arr.length-1){state.slide++;state.point=0;state.speechToken++;stopTutorAudio();render();const s=document.getElementById('speakState');if(s)s.textContent='Next slide…';setTimeout(teachPoint,650)}else{const s=document.getElementById('speakState');if(s)s.textContent='Lesson complete';speak('Excellent. You have completed this lesson. Take a moment to review the key ideas.')}}
 function toggleDoubt(){document.getElementById('doubtPanel')?.classList.toggle('open')}
 function sendText(){const i=document.getElementById('ask');const q=i.value.trim();if(q)handleDoubt(q);i.value=''}
-function handleDoubt(q){
+async function handleDoubt(q){
   state.paused=true;speechSynthesis?.cancel();
-  const c=current(); const lower=q.toLowerCase();
-  let answer=`Good question. Let’s connect it to ${c.title}. `;
-  if(/why|reason/.test(lower)) answer+=`The key reason is this: ${c.say}`;
-  else if(/example|real life|example/.test(lower)) answer+=`Use this mental model: ${teacherFlow(c.points[state.point]?.[0]||c.points[0][0],c.points[state.point]?.[1]||c.points[0][1],c)}`;
-  else answer+=`${c.say} Now put the doubt into your own words once; that is how I can check whether the idea is clear.`;
-  answer+=' Should we continue from exactly where we paused?';
-  state.chat.push({r:'student',t:q},{r:'ai',t:answer});
+  const c=current();
+  state.chat.push({r:'student',t:q},{r:'ai',t:'Thinking…'});
   render();document.getElementById('doubtPanel')?.classList.add('open');
-  setTimeout(()=>speak(answer),120);
+  try{
+    const history=state.chat.slice(0,-1).map(m=>({role:m.r==='student'?'user':'assistant',content:m.t}));
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history,context:{topic:state.topic,level:state.level,depth:state.depth,language:state.language,classActive:true,chapterCode:state.aiDeck?.chapterCode||''}})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'AI doubt response failed');
+    state.chat[state.chat.length-1]={r:'ai',t:String(data.answer||'I could not generate the explanation.')};
+  }catch(e){
+    console.error(e);
+    state.chat[state.chat.length-1]={r:'ai',t:'I could not reach the AI tutor right now. Please try the doubt again.'};
+  }
+  render();document.getElementById('doubtPanel')?.classList.add('open');
+  const answer=state.chat[state.chat.length-1]?.t||''; if(answer&&!answer.startsWith('I could not'))setTimeout(()=>speak(answer),120);
 }
 function voice(){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice input needs Chrome voice support');return}const R=window.SpeechRecognition||window.webkitSpeechRecognition,r=new R();r.lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';r.interimResults=false;r.maxAlternatives=1;r.onstart=()=>{state.listening=true;document.getElementById('mic')?.classList.add('listening');toast('Listening… speak your doubt')};r.onresult=e=>handleDoubt(e.results[0][0].transcript);r.onerror=()=>{state.listening=false;toast('I could not hear that clearly. Try again.')};r.onend=()=>{state.listening=false};r.start()}
 function toast(x){let d=document.createElement('div');d.className='toast';d.textContent=x;document.getElementById('classroom')?.appendChild(d);setTimeout(()=>d.remove(),1800)}
