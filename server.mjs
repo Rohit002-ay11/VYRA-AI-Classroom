@@ -168,7 +168,7 @@ async function tts(req,res){
   }
 }
 
-async function generateClass(req,res){try{
+async function generateClass(req,res){console.log('[CLASS] request received');try{
   const b=await body(req),topic=String(b.topic||'').trim()||'General Learning',level=String(b.level||'Class 10'),depth=String(b.depth||'Deep'),mins=Math.max(15,Math.min(60,Number(b.mins||30))),language=String(b.language||'English');
   const chapter=resolveChapter(topic,level); const retrievalContext={level,topic,chapterCode:chapter?.code||''};
   const ret=retrieve(topic+' '+level,retrievalContext,40);
@@ -185,7 +185,7 @@ Topic: ${topic}\nSelected level: ${level}\nDepth: ${depth}\nDuration: ${mins} mi
 
   for(let attempt=1;attempt<=3;attempt++){
     const repair=attempt===1?'':"\\n\\nREPAIR ATTEMPT "+attempt+": The previous deck did not pass source validation. Reason: "+lastReason+". Rebuild from the ordered source chunks. Keep the class concrete, non-repetitive and genuinely useful. The first slide must teach the actual topic/observation/setup. Do not mention this repair instruction.";
-    const raw=await callHF([{role:'system',content:CLASS_SYSTEM},{role:'user',content:basePrompt+repair}],Math.max(10000,mins*170));
+    const raw=await callAI([{role:'system',content:CLASS_SYSTEM},{role:'user',content:basePrompt+repair}],Math.max(10000,mins*170));
 
     let obj;
     try{obj=extractJSON(raw)}catch(e){lastReason=e.message;continue;}
@@ -252,5 +252,5 @@ Topic: ${topic}\nSelected level: ${level}\nDepth: ${depth}\nDuration: ${mins} mi
   }
 
   throw Object.assign(new Error("VYRA could not build the class. "+lastReason),{status:502});
-}catch(e){send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
+}catch(e){console.error('[CLASS] FAILED',e?.message||e);send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
 const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/tts')return tts(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,aiConnected:Boolean(OPENROUTER_API_KEY),premiumVoice:Boolean(ELEVENLABS_API_KEY&&ELEVENLABS_VOICE_ID),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));
