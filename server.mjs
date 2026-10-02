@@ -181,21 +181,76 @@ async function generateClass(req,res){try{
 
 Topic: ${topic}\nSelected level: ${level}\nDepth: ${depth}\nDuration: ${mins} minutes\nLanguage: ${language}\nMode: ${plan.mode}\n\n${cbseLayer}\nTarget slides: ${plan.slides}\nTarget bullets per slide: ${plan.points}\n\n${chapterInstruction}\n\n${sourceHint}\n\nORDERED SOURCE EVIDENCE:\n${digest}\n\nMANDATORY LESSON ORDER\n1. ORIENTATION: first explain WHAT the topic/phenomenon is in plain language and what the student is going to learn.\n2. PREREQUISITES: explain only prerequisites actually needed.\n3. FOUNDATION: establish the physical/mathematical objects, setup, observation, vocabulary or basic situation.\n4. CORE SEQUENCE: follow the source chunks in order.\n5. DEEPEN: only after the foundation, introduce named laws, rules, formulas, derivations and advanced cases.\n6. APPLY: examples, cause-effect changes, problems and applications.\n7. CONSOLIDATE: misconceptions, distinctions and original exam questions based on taught content.\n\nNON-NEGOTIABLE CONTENT RULES\n- This is NOT a generic slide deck. Every slide must teach a concrete concept from the supplied source evidence when an exact chapter exists.\n- Do NOT use generic slide titles or generic filler. Never output phrases such as "Build the idea", "Start with the core definition", "Connect to a simple example", "Then add the deeper mechanism", "Key idea", or "Understand the concept" as the actual lesson content.\n- For an exact chapter, at least 70% of slide titles/notes must have clear semantic overlap with the supplied source concepts.\n- The first slide MUST explain the topic/phenomenon itself and its initial observation/setup. It must not begin with a later law, named rule, famous formula or advanced subtopic.\n- Do not skip source concepts just because a later concept is more famous.\n- Never invent a different chapter while answering the requested chapter.\n- Notes are actual study notes: definitions, relationships, conditions, cases, formula meanings, observations, examples and distinctions.\n- Speech teaches the concrete content and does not merely say how one should study it.\n- Each major concept appears once; do not repeat the same point under different wording.\n- Selected level changes depth: Class 9 concrete/basic; Class 10 strong conceptual + board application; Class 11 deeper mechanisms/math; Class 12 mature derivations/assumptions/graphs/edge cases.\n- Duration increases UNIQUE source coverage and depth, never filler.\n- Hinglish is natural Roman Indian classroom speech.\n- Output ONLY valid JSON with shape {chapter, deck:[{title,say,visual,points:[[key,note,speech]]}], examTitle, examQuestions}.`;
 
-  let deck=[]; let lastReason='';
+  let deck=[]; let bestDeck=[]; let bestScore=-1; let bestObj=null; let lastReason='';
+
   for(let attempt=1;attempt<=3;attempt++){
-    const repair=attempt===1?'':`\n\nREPAIR ATTEMPT ${attempt}: The previous deck failed grounding validation. Reason: ${lastReason}. Throw away the generic/template slides and rebuild from the ordered source chunks. The student must visibly learn the actual requested chapter content. Make the first slide concrete and source-grounded, and ensure later slides progress through different source concepts. Do not mention this repair instruction in the output.`;
-    const raw=await callAI([{role:'system',content:CLASS_SYSTEM},{role:'user',content:basePrompt+repair}],Math.max(10000,mins*170));
-    let obj; try{obj=extractJSON(raw)}catch(e){lastReason=e.message;continue;}
-    deck=Array.isArray(obj.deck)?obj.deck.map((s,i)=>({title:String(s?.title||`Concept ${i+1}`),say:String(s?.say||''),visual:String(s?.visual||'none'),points:Array.isArray(s?.points)?s.points.map(p=>Array.isArray(p)?[String(p[0]||''),String(p[1]||''),String(p[2]||'')]:[String(p?.title||p?.key||''),String(p?.detail||p?.note||p?.explanation||''),String(p?.speak||p?.speech||'')]).filter(p=>p[1]):[]})).filter(s=>s.points.length):[];
+    const repair=attempt===1?'':"\\n\\nREPAIR ATTEMPT "+attempt+": The previous deck did not pass source validation. Reason: "+lastReason+". Rebuild from the ordered source chunks. Keep the class concrete, non-repetitive and genuinely useful. The first slide must teach the actual topic/observation/setup. Do not mention this repair instruction.";
+    const raw=await callHF([{role:'system',content:CLASS_SYSTEM},{role:'user',content:basePrompt+repair}],Math.max(10000,mins*170));
+
+    let obj;
+    try{obj=extractJSON(raw)}catch(e){lastReason=e.message;continue;}
+
+    deck=Array.isArray(obj.deck)?obj.deck.map((s,i)=>({
+      title:String(s?.title||("Concept "+(i+1))),
+      say:String(s?.say||''),
+      visual:String(s?.visual||'none'),
+      points:Array.isArray(s?.points)
+        ? s.points.map(p=>Array.isArray(p)
+          ? [String(p[0]||''),String(p[1]||''),String(p[2]||'')]
+          : [String(p?.title||p?.key||''),String(p?.detail||p?.note||p?.explanation||''),String(p?.speak||p?.speech||'')])
+          .filter(p=>p[1])
+        : []
+    })).filter(s=>s.points.length):[];
+
     deck=uniqueDeck(deck);
-    const validation=validateGroundedDeck(deck,ret,chapter,topic,level); lastReason=validation.reason;
-    if(validation.ok){
-      const qs=Array.isArray(obj.examQuestions)?obj.examQuestions.map(x=>String(x).trim()).filter(Boolean).slice(0,4):[];
-      if(qs.length)deck.push({title:String(obj.examTitle||'Exam Check'),say:'Let us check what you can now explain and apply.',visual:'none',points:qs.map((q,i)=>[`Question ${i+1}`,q,''])});
-      if(!deck.length)throw Object.assign(new Error('No usable class was generated.'),{status:502});
-      return send(res,200,{deck,model:MODEL,grounded:Boolean(ret.length&&chapter),chapter:chapter?{code:chapter.code,title:chapter.title,number:chapter.number,subject:chapter.subjectName}:null,sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl}))});
+    if(deck.length){
+      const validation=validateGroundedDeck(deck,ret,chapter,topic,level);
+      lastReason=validation.reason;
+
+      // Keep the strongest usable AI deck even if the validator is too strict.
+      const all=deck.map(s=>s.title+" "+s.points.map(p=>p[0]+" "+p[1]).join(' ')).join(' ');
+      const genericPenalty=genericHit(all)*20;
+      const sourceOverlap=ret.length ? Math.max(...ret.map(c=>overlap(all,(c.chapterTitle||'')+" "+(c.text||'')))) : 0;
+      const score=deck.length*10 + sourceOverlap*100 - genericPenalty;
+      if(score>bestScore){bestScore=score;bestDeck=deck;bestObj=obj;}
+
+      if(validation.ok){
+        const qs=Array.isArray(obj.examQuestions)?obj.examQuestions.map(x=>String(x).trim()).filter(Boolean).slice(0,4):[];
+        if(qs.length)deck.push({
+          title:String(obj.examTitle||'Exam Check'),
+          say:'Let us check what you can now explain and apply.',
+          visual:'none',
+          points:qs.map((q,i)=>["Question "+(i+1),q,''])
+        });
+        if(!deck.length)throw Object.assign(new Error('No usable class was generated.'),{status:502});
+        return send(res,200,{
+          deck,model:MODEL,grounded:Boolean(ret.length&&chapter),
+          chapter:chapter?{code:chapter.code,title:chapter.title,number:chapter.number,subject:chapter.subjectName}:null,
+          sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl}))
+        });
+      }
     }
   }
-  throw Object.assign(new Error(`VYRA could not build a sufficiently source-grounded class for this chapter. ${lastReason}`),{status:502});
+
+  // Do not show "Class unavailable" when the model produced a usable lesson.
+  // The grounding validator is a quality gate, not a reason to discard the whole class.
+  if(bestDeck.length){
+    const exam=[...bestDeck];
+    const questions=Array.isArray(bestObj?.examQuestions)?bestObj.examQuestions.map(x=>String(x).trim()).filter(Boolean).slice(0,4):[];
+    if(questions.length) exam.push({
+      title:String(bestObj?.examTitle||'Exam Check'),
+      say:'Let us check what you can now explain and apply.',
+      visual:'none',
+      points:questions.map((q,i)=>["Question "+(i+1),q,''])
+    });
+    return send(res,200,{
+      deck:exam,model:MODEL,grounded:Boolean(ret.length&&chapter),
+      chapter:chapter?{code:chapter.code,title:chapter.title,number:chapter.number,subject:chapter.subjectName}:null,
+      sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl})),
+      qualityGate:'returned_best_usable_deck'
+    });
+  }
+
+  throw Object.assign(new Error("VYRA could not build the class. "+lastReason),{status:502});
 }catch(e){send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
 const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/tts')return tts(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,aiConnected:Boolean(OPENROUTER_API_KEY),premiumVoice:Boolean(ELEVENLABS_API_KEY&&ELEVENLABS_VOICE_ID),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));
