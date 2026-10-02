@@ -37,20 +37,50 @@ EXAM: End with a small set of strong original questions based only on what was a
 OUTPUT ONLY VALID JSON. Shape: {chapter, deck:[{title,say,visual,points:[[key,note,speech]]}], examTitle, examQuestions}. The key is only an internal label; the note itself must contain the actual study content.`
 function send(res,status,data,type='application/json; charset=utf-8'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store'});res.end(type.startsWith('application/json')?JSON.stringify(data):data)}
 function body(req){return new Promise((resolve,reject)=>{let b='';req.on('data',c=>{b+=c;if(b.length>2e6)req.destroy()});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'))}catch(e){reject(e)}});req.on('error',reject)})}
-function extractChatText(d){return String(d?.choices?.[0]?.message?.content||'').trim()}
+function extractChatText(d){
+  const c=d?.choices?.[0]?.message?.content;
+  if(typeof c==='string') return c.trim();
+  if(Array.isArray(c)) return c.map(x=>typeof x==='string'?x:String(x?.text??x?.content??'')).join('').trim();
+  if(c&&typeof c==='object') return String(c.text??c.content??'').trim();
+  return '';
+}
 function extractJSON(t){let x=String(t||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();try{return JSON.parse(x)}catch{}const a=x.indexOf('{'),b=x.lastIndexOf('}');if(a>=0&&b>a)try{return JSON.parse(x.slice(a,b+1))}catch{}throw new Error('AI returned invalid class JSON.')}
 async function callAI(messages,max_tokens=3600){
-  if(!OPENROUTER_API_KEY)throw Object.assign(new Error('VYRA AI is not connected.\nOPENROUTER_API_KEY is missing in the server environment.'),{status:500});
-  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
-    method:'POST',
-    headers:{Authorization:`Bearer ${OPENROUTER_API_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://vyra-ai-classroom.onrender.com','X-Title':'VYRA AI Classroom'},
-    body:JSON.stringify({model:MODEL,messages,stream:false,max_tokens,temperature:0.45})
-  });
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw Object.assign(new Error(d?.error?.message||d?.error||'OpenRouter AI provider returned an error.'),{status:r.status});
-  const a=extractChatText(d);
-  if(!a)throw Object.assign(new Error('The AI returned no text.'),{status:502});
-  return a;
+  if(!OPENROUTER_API_KEY) throw Object.assign(new Error('VYRA AI is not connected. OPENROUTER_API_KEY is missing in the server environment.'),{status:500});
+  const models=[MODEL,'openrouter/free'].filter((x,i,a)=>x&&a.indexOf(x)===i);
+  let lastError=null;
+  for(const model of models){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+      const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+        method:'POST',
+        headers:{Authorization:`Bearer ${OPENROUTER_API_KEY}`,'Content-Type':'application/json','HTTP-Referer':'https://vyra-ai-classroom.onrender.com','X-Title':'VYRA AI Classroom'},
+        body:JSON.stringify({model,messages,stream:false,max_tokens,temperature:0.35}) ,
+        signal:controller.signal
+      });
+      const raw=await r.text();
+      let d={}; try{d=JSON.parse(raw)}catch{}
+      if(!r.ok){
+        const msg=String(d?.error?.message||d?.error||raw||'OpenRouter request failed');
+        lastError=Object.assign(new Error(msg),{status:r.status});
+        console.error(`VYRA AI model failed: ${model} | HTTP ${r.status} | ${msg}`);
+        if(r.status===401||r.status===402||r.status===403) break;
+        continue;
+      }
+      const a=extractChatText(d);
+      if(!a){
+        lastError=Object.assign(new Error(`Model ${model} returned no text.`),{status:502});
+        console.error(`VYRA AI empty response: ${model}`);
+        continue;
+      }
+      return a;
+    }catch(e){
+      lastError=e.name==='AbortError'?Object.assign(new Error(`OpenRouter timed out after 90 seconds (model: ${model}).`),{status:504}):e;
+      console.error(`VYRA AI request exception: ${model} | ${lastError.message}`);
+    }finally{clearTimeout(timer)}
+  }
+  throw Object.assign(new Error(lastError?.message||'OpenRouter could not generate a response.'),{status:lastError?.status||502});
 }
 function words(s){return new Set(String(s||'').toLowerCase().replace(/[^a-z0-9\u0900-\u097F]+/gi,' ').split(/\s+/).filter(x=>x.length>2))}
 function score(c,q){const qW=words(q),tW=words(`${c.chapterTitle} ${c.text}`);let n=0;for(const w of qW)if(tW.has(w))n++;const ql=String(q).toLowerCase(),tl=String(c.chapterTitle).toLowerCase();if(ql.includes(tl)||tl.includes(ql))n+=8;return n}
@@ -253,4 +283,4 @@ Topic: ${topic}\nSelected level: ${level}\nDepth: ${depth}\nDuration: ${mins} mi
 
   throw Object.assign(new Error("VYRA could not build the class. "+lastReason),{status:502});
 }catch(e){console.error('[CLASS] FAILED',e?.message||e);send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
-const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/tts')return tts(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,aiConnected:Boolean(OPENROUTER_API_KEY),premiumVoice:Boolean(ELEVENLABS_API_KEY&&ELEVENLABS_VOICE_ID),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));
+const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/tts')return tts(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,fallbackModel:'openrouter/free',aiConnected:Boolean(OPENROUTER_API_KEY),premiumVoice:Boolean(ELEVENLABS_API_KEY&&ELEVENLABS_VOICE_ID),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));
