@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
-const PORT=Number(process.env.PORT||8093), HF_TOKEN=process.env.HF_TOKEN||'', MODEL=process.env.HF_MODEL||'openai/gpt-oss-120b:fastest';
+const PORT=Number(process.env.PORT||8093), HF_TOKEN=process.env.HF_TOKEN||'', MODEL=process.env.HF_MODEL||'openai/gpt-oss-120b:fastest', ELEVENLABS_API_KEY=process.env.ELEVENLABS_API_KEY||'', ELEVENLABS_VOICE_ID=process.env.ELEVENLABS_VOICE_ID||'', ELEVENLABS_MODEL=process.env.ELEVENLABS_MODEL||'eleven_multilingual_v2';
 let CORPUS={chunks:[]}; try{CORPUS=JSON.parse(fs.readFileSync(path.join(__dirname,'corpus','index.json'),'utf8'))}catch{}
 let CURRICULUM={}; try{CURRICULUM=JSON.parse(fs.readFileSync(path.join(__dirname,'ncert','curriculum.json'),'utf8'))}catch{}
 const SYSTEM=`You are VYRA AI, a world-class human-like tutor and conversational academic companion. Understand what the student means and teach it clearly instead of merely outputting an answer.
@@ -100,6 +100,28 @@ function uniqueDeck(deck){
   return clean;
 }
 async function chat(req,res){try{const b=await body(req),message=String(b.message||'').trim();if(!message)return send(res,400,{error:'Message is empty.'});const context=b.context||{},history=Array.isArray(b.history)?b.history.slice(-20):[],ret=retrieve(message+' '+(context.topic||''),context,8);const ctx=`Current classroom context:\n- Topic: ${context.topic||'none'}\n- Level: ${context.level||'not specified'}\n- Depth: ${context.depth||'not specified'}\n- Language: ${context.language||'English'}\n- Class active: ${context.classActive?'yes':'no'}`;const msgs=[{role:'system',content:SYSTEM+'\n\n'+ctx+'\n\nNCERT RETRIEVAL ('+ret.length+' chunks):\n'+grounding(ret)}];for(const m of history)if((m.role==='user'||m.role==='assistant')&&typeof m.content==='string')msgs.push({role:m.role,content:m.content.slice(0,8000)});msgs.push({role:'user',content:message});const answer=await callHF(msgs,3600);send(res,200,{answer,model:MODEL,grounded:Boolean(ret.length),sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl}))})}catch(e){send(res,e.status||500,{error:e.message||'Server error'})}}
+
+async function tts(req,res){
+  try{
+    if(!ELEVENLABS_API_KEY||!ELEVENLABS_VOICE_ID) return send(res,503,{error:'Premium neural voice is not configured.'});
+    const b=await body(req);
+    const text=String(b.text||'').trim();
+    if(!text) return send(res,400,{error:'Text is empty.'});
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID)}?output_format=mp3_44100_128`,{
+      method:'POST',
+      headers:{'xi-api-key':ELEVENLABS_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text,model_id:ELEVENLABS_MODEL,voice_settings:{stability:0.48,similarity_boost:0.82,style:0.18,use_speaker_boost:true}})
+    });
+    if(!r.ok){const msg=await r.text(); throw Object.assign(new Error(msg||'Premium voice request failed'),{status:r.status});}
+    const audio=Buffer.from(await r.arrayBuffer());
+    res.writeHead(200,{'Content-Type':'audio/mpeg','Content-Length':String(audio.length),'Cache-Control':'no-store'});
+    return res.end(audio);
+  }catch(e){
+    console.error('TTS error:',e.message);
+    return send(res,e.status||500,{error:e.message||'TTS error'});
+  }
+}
+
 async function generateClass(req,res){try{
   const b=await body(req),topic=String(b.topic||'').trim()||'General Learning',level=String(b.level||'Class 10'),depth=String(b.depth||'Deep'),mins=Math.max(15,Math.min(60,Number(b.mins||30))),language=String(b.language||'English');
   const chapter=resolveChapter(topic,level); const retrievalContext={level,topic,chapterCode:chapter?.code||''}; const ret=retrieve(topic+' '+level,retrievalContext,20);
@@ -149,4 +171,4 @@ STRICT RULES
   deck=uniqueDeck(deck); const qs=Array.isArray(obj.examQuestions)?obj.examQuestions.map(x=>String(x).trim()).filter(Boolean).slice(0,4):[]; if(qs.length)deck.push({title:String(obj.examTitle||'Exam Check'),say:'Let us check what you can now explain and apply.',visual:'none',points:qs.map((q,i)=>[`Question ${i+1}`,q,''])});
   if(!deck.length)throw Object.assign(new Error('No usable class was generated.'),{status:502}); send(res,200,{deck,model:MODEL,grounded:Boolean(ret.length&&chapter),chapter:chapter?{code:chapter.code,title:chapter.title,number:chapter.number,subject:chapter.subjectName}:null,sources:ret.map(c=>({chapter:c.chapter,chapterTitle:c.chapterTitle,sourceUrl:c.sourceUrl}))});
 }catch(e){send(res,e.status||500,{error:e.message||'Could not generate the class.'})}}
-const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,aiConnected:Boolean(HF_TOKEN),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));
+const server=http.createServer(async(req,res)=>{try{if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'});return res.end()}if(req.method==='POST'&&req.url==='/api/chat')return chat(req,res);if(req.method==='POST'&&req.url==='/api/tts')return tts(req,res);if(req.method==='POST'&&req.url==='/api/class')return generateClass(req,res);if(req.method==='GET'&&req.url==='/api/corpus-status')return send(res,200,{indexedChunks:CORPUS.chunks?.length||0,generatedAt:CORPUS.generatedAt||null,source:CORPUS.source||null});if(req.method==='GET'&&(req.url==='/'||req.url==='/index.html'))return send(res,200,fs.readFileSync(path.join(__dirname,'index.html'),'utf8'),'text/html; charset=utf-8');if(req.method==='GET'&&req.url==='/manifest.webmanifest')return send(res,200,fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'),'application/manifest+json; charset=utf-8');if(req.method==='GET'&&req.url==='/sw.js')return send(res,200,fs.readFileSync(path.join(__dirname,'sw.js'),'utf8'),'application/javascript; charset=utf-8');if(req.method==='GET'&&req.url.startsWith('/icons/')){const f=path.join(__dirname,req.url.split('/').filter(Boolean).join('/'));if(fs.existsSync(f))return send(res,200,fs.readFileSync(f),req.url.endsWith('.png')?'image/png':'application/octet-stream');}if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true,model:MODEL,aiConnected:Boolean(HF_TOKEN),premiumVoice:Boolean(ELEVENLABS_API_KEY&&ELEVENLABS_VOICE_ID),corpusChunks:CORPUS.chunks?.length||0});send(res,404,{error:'Not found'})}catch(e){console.error(e);send(res,500,{error:e.message||'Server error'})}});server.listen(PORT,()=>console.log(`VYRA AI Classroom running at http://localhost:${PORT}`));

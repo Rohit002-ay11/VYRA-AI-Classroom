@@ -72,7 +72,7 @@ const generic=[
  {title:'Build the idea',say:'Let us start from the simplest possible picture. I will give you the core idea first, then add the details only when they help you understand it.',points:[['Start with the core definition.','First understand what the concept actually means.'],['Connect it to a simple example.','A familiar example makes the abstract idea easier to hold.'],['Then add the deeper mechanism.','Once the foundation is clear, the advanced detail becomes much easier.']],visual:'none'},
  {title:'Make it intuitive',say:'Now I am going to connect the concept to a mental model. Do not memorize the words yet; understand the relationship between the parts.',points:[['Identify the important parts.','Separate the essential pieces from the extra information.'],['Understand how the parts interact.','The relationship is often more important than a definition.'],['Use one test example.','If you can apply the idea, you actually understand it.']],visual:'none'}
 ];
-let state={screen:'home',topic:'',level:'Class 11',depth:'Deep',mins:30,language:'English',voiceName:'auto',languageVoice:'auto',slide:0,point:0,chat:[],listening:false,paused:false,voiceRate:.92,voicePitch:.90,speechToken:0,currentSpeechText:'',currentSpeechAfter:null,aiDeck:null,classLoading:false};window.VYRA_CLASS_STATE=state;const app=document.getElementById('app');
+let state={screen:'home',topic:'',level:'Class 11',depth:'Deep',mins:30,language:'English',voiceName:'auto',languageVoice:'auto',slide:0,point:0,chat:[],listening:false,paused:false,voiceRate:.92,voicePitch:.90,speechToken:0,currentSpeechText:'',currentSpeechAfter:null,aiDeck:null,classLoading:false,premiumVoice:false,currentAudio:null};window.VYRA_CLASS_STATE=state;const app=document.getElementById('app');
 function syncAIChatButton(){
   const tab=document.getElementById('vyraChatTab');
   if(!tab)return;
@@ -188,7 +188,7 @@ function changeSpeed(delta){
   // Restart the current utterance at the new rate without advancing the lesson.
   if(state.screen==='class' && state.currentSpeechText){
     const text=state.currentSpeechText, after=state.currentSpeechAfter;
-    speechSynthesis?.cancel();
+    stopTutorAudio();
     setTimeout(()=>speak(text,after),60);
   }
 }
@@ -204,7 +204,7 @@ async function begin(){
   }
 }
 async function enterFullScreen(){try{await document.documentElement.requestFullscreen?.();if(screen.orientation?.lock)await screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}
-function exitClass(){speechSynthesis?.cancel();try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}state.screen='home';render()}
+function exitClass(){stopTutorAudio();try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}state.screen='home';render()}
 function deck(){return state.aiDeck&&state.aiDeck.length?state.aiDeck:(lessons[state.topic]||generic)}function current(){return deck()[state.slide%deck().length]}
 function classroom(){const c=current();const pct=((state.slide+state.point/(c.points?.length||1))/deck().length)*100;app.innerHTML=`<div class="classroom" id="classroom">${state.classLoading?'<div class="toast" style="bottom:auto;top:50%;">VYRA is building your NCERT-focused class…</div>':''}<div class="classTop"><div class="classMeta"><div class="brand"><div class="logo">✦</div><b>VYRA</b></div><span class="level">${state.level} · ${state.depth}</span></div><div class="progress"><i style="width:${pct}%"></i></div><button class="iconBtn exit" onclick="exitClass()">×</button></div><div class="lessonSurface"><div class="lessonBoard"><div class="boardHeader"><span class="boardTag">LIVE CLASS · ${c.title.toUpperCase()}</span><span class="teacherState" id="teacherState">Preparing the explanation…</span></div>${visual(c.visual)}<div class="chalkArea"><div class="slideTitle">${escapeHtml(c.title)}</div><div class="noteStack" id="noteStack"></div></div></div></div><div class="speakingBar"><div class="speaking"><span class="wave"><i></i><i></i><i></i><i></i></span><span id="speakState">VYRA is teaching</span></div></div><button class="doubtBtn" onclick="toggleDoubt()">🎙 Ask a doubt</button><button class="voiceBadge" onclick="toggleVoiceMenu()">🎙 <b>Tutor voice</b></button><div class="voiceMenu" id="voiceMenu"><label>TUTOR VOICE</label><select onchange="state.voicePitch=this.value==='deep'?.82:.94;state.voiceRate=this.value==='deep'?.82:.86"><option value="clear">Clear · professional</option><option value="deep">Deep · clear</option><option value="balanced">Balanced · clear</option></select><div class="speedRow"><span>Speed</span><b id="speedVal">0.92×</b></div><input type="range" min="0.70" max="1.00" step="0.01" value="0.92" oninput="setVoiceRate(this.value)"><div class="speedRow"><span>Depth</span><b id="pitchVal">0.92</b></div><input type="range" min="0.60" max="1.00" step="0.01" value="0.92" oninput="setVoicePitch(this.value)"></div><aside class="doubtPanel" id="doubtPanel"><div class="doubtHead"><span>◌ Doubt with your tutor</span><span class="live">● LIVE</span></div><div class="chat" id="chat">${state.chat.length?state.chat.map(m=>`<div class="msg ${m.r}"><p>${m.t}</p></div>`).join(''):`<div class="empty"><b>Yes Rohit, what's your doubt?</b><p>Tap the microphone and speak naturally. I’ll explain using the current lesson context.</p></div>`}</div><div class="ask"><input id="ask" placeholder="Optional text input" onkeydown="if(event.key==='Enter')sendText()"><button id="mic" onclick="voice()">🎙</button><div class="speedControl"><span>Speed</span><button onclick="changeSpeed(-.1)">−</button><b id="speedValue">${(state.voiceRate||.82).toFixed(1)}×</b><button onclick="changeSpeed(.1)">+</button></div><button onclick="sendText()">➜</button></div></aside></div>`;setTimeout(()=>restorePoints(),40)}
 function noteDetail(point,sub){
@@ -423,37 +423,49 @@ function localizedSpeech(text){
 function cleanSpeechText(text){
   return String(text||'').replace(/[*_#`]/g,'').replace(/^\s*[-•]\s*/gm,'').replace(/\s+/g,' ').trim();
 }
+async function loadVoiceCapability(){
+  try{const r=await fetch('/health');const d=await r.json();state.premiumVoice=Boolean(d.premiumVoice)}catch(e){state.premiumVoice=false}
+}
+function stopTutorAudio(){
+  state.speechToken++;
+  try{speechSynthesis?.cancel()}catch(e){}
+  if(state.currentAudio){try{state.currentAudio.pause();state.currentAudio.src=''}catch(e){}state.currentAudio=null}
+}
+function premiumVoiceText(text){
+  return cleanSpeechText(localizedSpeech(text)).replace(/\s+([,.!?;:])/g,'$1').replace(/\.{4,}/g,'...').trim();
+}
+async function speakPremium(text,after,token){
+  if(!state.premiumVoice)return false;
+  try{
+    const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:premiumVoiceText(text),language:state.language})});
+    if(!r.ok)throw new Error('premium voice unavailable');
+    const blob=await r.blob();
+    if(token!==state.speechToken)return true;
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url); audio.preload='auto'; audio.volume=1; state.currentAudio=audio;
+    audio.playbackRate=Math.min(1.12,Math.max(.78,state.voiceRate||.92));
+    const cleanup=()=>{URL.revokeObjectURL(url);if(state.currentAudio===audio)state.currentAudio=null};
+    audio.onplay=()=>{if(token!==state.speechToken)return;const e=document.getElementById('teacherState');if(e)e.textContent='Teaching naturally…'};
+    audio.onended=()=>{cleanup();if(token===state.speechToken)after?.()};
+    audio.onerror=()=>{cleanup();if(token===state.speechToken)after?.()};
+    await audio.play(); return true;
+  }catch(e){return false}
+}
 function speak(text,after){
-  if(!('speechSynthesis'in window)){after?.();return}
-  const token=++state.speechToken;
-  state.currentSpeechText=text;
-  state.currentSpeechAfter=after;
-  speechSynthesis.cancel();
-  const lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';
-  const make=(useVoice)=>{
+  const token=++state.speechToken; state.currentSpeechText=text; state.currentSpeechAfter=after; stopTutorAudio(); state.speechToken=token;
+  speakPremium(text,after,token).then(used=>{
+    if(used)return;
+    if(!('speechSynthesis'in window)){after?.();return}
+    const lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';
     const spoken=cleanSpeechText(localizedSpeech(text));
-    const u=new SpeechSynthesisUtterance(spoken);
-    u.lang=lang;u.rate=Math.min(1.05,Math.max(.72,state.voiceRate||.92));u.pitch=Math.min(1.05,Math.max(.75,state.voicePitch||.90));u.volume=1;
-    if(useVoice){const v=pickTutorVoice();if(v)u.voice=v}
-    return u;
-  };
-  let retried=false, startedAt=0, watchdog=null;
-  const cleanup=()=>{if(watchdog)clearInterval(watchdog);watchdog=null};
-  const finish=()=>{cleanup();if(token===state.speechToken)after?.()};
-  const u=make(true);
-  u.onstart=()=>{if(token!==state.speechToken)return;startedAt=Date.now();const e=document.getElementById('teacherState');if(e)e.textContent='Explaining naturally…';
-    // Android/Chrome speech engines can pause or stall during a longer utterance.
-    watchdog=setInterval(()=>{if(token===state.speechToken&&speechSynthesis.speaking&&!speechSynthesis.paused)speechSynthesis.resume()},7000);
-  };
-  u.onend=finish;
-  u.onerror=()=>{
-    cleanup();
-    if(token!==state.speechToken)return;
-    if(!retried){retried=true;setTimeout(()=>{if(token!==state.speechToken)return;const f=make(false);f.onend=finish;f.onerror=finish;speechSynthesis.speak(f)},80)}
-    else finish();
-  };
-  // No artificial pause between points: the speech engine handles natural sentence rhythm.
-  setTimeout(()=>{if(token===state.speechToken)speechSynthesis.speak(u)},30);
+    const parts=spoken.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(x=>x.trim()).filter(Boolean)||[spoken]; let i=0;
+    const next=()=>{
+      if(token!==state.speechToken)return; if(i>=parts.length){after?.();return}
+      const u=new SpeechSynthesisUtterance(parts[i++]); u.lang=lang; u.rate=Math.min(1.02,Math.max(.72,state.voiceRate||.92)); u.pitch=Math.min(1.0,Math.max(.78,state.voicePitch||.90)); u.volume=1;
+      const v=pickTutorVoice();if(v)u.voice=v; const e=document.getElementById('teacherState');if(e)e.textContent='Explaining naturally…';
+      u.onend=()=>setTimeout(next,90); u.onerror=()=>setTimeout(next,80); speechSynthesis.speak(u);
+    }; next();
+  });
 }
 function teacherFlow(point,extra,c){
   if(/pyq|important questions|exam questions/i.test(c.title||'')) return `${point}. ${extra||''}`.trim();
@@ -483,7 +495,7 @@ function teachPoint(){
     else{setTimeout(completeConcept,850)}
   });
 }
-function completeConcept(){const arr=deck();if(state.slide<arr.length-1){state.slide++;state.point=0;state.speechToken++;speechSynthesis?.cancel();render();const s=document.getElementById('speakState');if(s)s.textContent='Next slide…';setTimeout(teachPoint,650)}else{const s=document.getElementById('speakState');if(s)s.textContent='Lesson complete';speak('Excellent. You have completed this lesson. Take a moment to review the key ideas.')}}
+function completeConcept(){const arr=deck();if(state.slide<arr.length-1){state.slide++;state.point=0;state.speechToken++;stopTutorAudio();render();const s=document.getElementById('speakState');if(s)s.textContent='Next slide…';setTimeout(teachPoint,650)}else{const s=document.getElementById('speakState');if(s)s.textContent='Lesson complete';speak('Excellent. You have completed this lesson. Take a moment to review the key ideas.')}}
 function toggleDoubt(){document.getElementById('doubtPanel')?.classList.toggle('open')}
 function sendText(){const i=document.getElementById('ask');const q=i.value.trim();if(q)handleDoubt(q);i.value=''}
 function handleDoubt(q){
@@ -500,7 +512,7 @@ function handleDoubt(q){
 }
 function voice(){if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){toast('Voice input needs Chrome voice support');return}const R=window.SpeechRecognition||window.webkitSpeechRecognition,r=new R();r.lang=({English:'en-IN',Hindi:'hi-IN',Hinglish:'en-IN',Tamil:'ta-IN',Telugu:'te-IN'})[state.language]||'en-IN';r.interimResults=false;r.maxAlternatives=1;r.onstart=()=>{state.listening=true;document.getElementById('mic')?.classList.add('listening');toast('Listening… speak your doubt')};r.onresult=e=>handleDoubt(e.results[0][0].transcript);r.onerror=()=>{state.listening=false;toast('I could not hear that clearly. Try again.')};r.onend=()=>{state.listening=false};r.start()}
 function toast(x){let d=document.createElement('div');d.className='toast';d.textContent=x;document.getElementById('classroom')?.appendChild(d);setTimeout(()=>d.remove(),1800)}
-if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>{if(state.screen==='setup')render()}}document.addEventListener('fullscreenchange',()=>{});render();
+if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>{if(state.screen==='setup')render()}}document.addEventListener('fullscreenchange',()=>{});loadVoiceCapability();render();
 </script><button id="vyraChatTab" type="button">AI Chat</button>
 <section id="vyraChatPanel">
 <header class="vch"><div><span class="brand">VYRA AI</span><span class="status">● Ready to teach</span></div><div><button id="vNew">New chat</button><button id="vClose">Close</button></div></header>
